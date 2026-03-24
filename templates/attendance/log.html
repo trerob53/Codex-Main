@@ -1,0 +1,95 @@
+{% extends "base.html" %}
+{% block title %}Log Infraction — Attendance — Cerasus Hub{% endblock %}
+
+{% block tabs %}
+<div class="module-tabs">
+  <a href="{{ url_for('attendance.dashboard') }}" class="module-tab {{ 'active' if active_tab == 'dashboard' }}">Dashboard</a>
+  <a href="{{ url_for('attendance.roster') }}" class="module-tab {{ 'active' if active_tab == 'roster' }}">Roster</a>
+  <a href="{{ url_for('attendance.sites') }}" class="module-tab {{ 'active' if active_tab == 'sites' }}">Sites</a>
+  <a href="{{ url_for('attendance.log_infraction') }}" class="module-tab {{ 'active' if active_tab == 'log' }}">Log Infraction</a>
+  <a href="{{ url_for('attendance.discipline') }}" class="module-tab {{ 'active' if active_tab == 'discipline' }}">Discipline</a>
+  <a href="{{ url_for('attendance.reviews') }}" class="module-tab {{ 'active' if active_tab == 'reviews' }}">Reviews</a>
+  <a href="{{ url_for('attendance.reports') }}" class="module-tab {{ 'active' if active_tab == 'reports' }}">Reports</a>
+  <a href="{{ url_for('attendance.analytics') }}" class="module-tab {{ 'active' if active_tab == 'analytics' }}">Analytics</a>
+</div>
+{% endblock %}
+
+{% block content %}
+<div class="page-header">
+  <div>
+    <h1 class="page-title">Log Infraction</h1>
+    <p class="page-subtitle">Record a new attendance infraction for an officer</p>
+  </div>
+</div>
+
+<div class="card" style="max-width:640px; margin-top:16px; padding:24px;">
+  <form method="POST" action="{{ url_for('attendance.log_infraction') }}">
+    <!-- Officer -->
+    <div style="margin-bottom:16px;">
+      <label class="form-label" for="employee_id">Officer *</label>
+      <select name="employee_id" id="employee_id" class="form-input" required>
+        <option value="">Select an officer...</option>
+        {% for off in officers %}
+        <option value="{{ off.employee_id or off.officer_id }}">{{ off.name }} ({{ off.employee_id or off.officer_id }})</option>
+        {% endfor %}
+      </select>
+    </div>
+
+    <!-- Infraction Type -->
+    <div style="margin-bottom:16px;">
+      <label class="form-label" for="infraction_type">Infraction Type *</label>
+      <select name="infraction_type" id="infraction_type" class="form-input" required onchange="updatePoints()">
+        <option value="">Select type...</option>
+        {% for key, info in infraction_types.items() %}
+        <option value="{{ key }}" data-points="{{ info.points }}">{{ info.label }} ({{ info.points }} pts)</option>
+        {% endfor %}
+      </select>
+    </div>
+
+    <!-- Site -->
+    <div style="margin-bottom:16px;">
+      <label class="form-label" for="site">Site</label>
+      <select name="site" id="site" class="form-input">
+        <option value="">Select site...</option>
+        {% for s in sites %}
+        <option value="{{ s }}">{{ s }}</option>
+        {% endfor %}
+      </select>
+    </div>
+
+    <!-- Date -->
+    <div style="margin-bottom:16px;">
+      <label class="form-label" for="infraction_date">Infraction Date *</label>
+      <input type="date" name="infraction_date" id="infraction_date" class="form-input" value="{{ today }}" required>
+    </div>
+
+    <!-- Points Override -->
+    <div style="margin-bottom:16px;">
+      <label class="form-label" for="points_assigned">Points (leave blank to use default)</label>
+      <input type="number" name="points_assigned" id="points_assigned" class="form-input" step="0.5" min="0" placeholder="Auto from type">
+    </div>
+
+    <!-- Notes -->
+    <div style="margin-bottom:20px;">
+      <label class="form-label" for="description">Notes / Description</label>
+      <textarea name="description" id="description" class="form-input" rows="3" placeholder="Optional notes about this infraction..."></textarea>
+    </div>
+
+    <div style="display:flex; gap:12px;">
+      <button type="submit" class="btn btn-blue">Log Infraction</button>
+      <a href="{{ url_for('attendance.discipline') }}" class="btn btn-secondary">Cancel</a>
+    </div>
+  </form>
+</div>
+
+<script>
+function updatePoints() {
+  var sel = document.getElementById('infraction_type');
+  var opt = sel.options[sel.selectedIndex];
+  var pts = opt.getAttribute('data-points');
+  if (pts !== null && pts !== '') {
+    document.getElementById('points_assigned').placeholder = pts + ' pts (default)';
+  }
+}
+</script>
+{% endblock %}

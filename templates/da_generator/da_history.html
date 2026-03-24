@@ -1,0 +1,169 @@
+{% extends "base.html" %}
+{% block title %}DA History — DA Generator — Cerasus Hub{% endblock %}
+
+{% block tabs %}
+<div class="module-tabs">
+  {% for section_title, section_items in sidebar_sections %}
+    {% for label, endpoint in section_items %}
+    <a href="{{ url_for(endpoint) }}" class="module-tab {{ 'active' if active_tab == label else '' }}">{{ label }}</a>
+    {% endfor %}
+  {% endfor %}
+</div>
+{% endblock %}
+
+{% block content %}
+<div class="page-header">
+  <div>
+    <h1 class="page-title">DA History</h1>
+    <p class="page-subtitle">All disciplinary action records and their current status</p>
+  </div>
+  <div>
+    <a href="{{ url_for('da_generator.new_da') }}" class="btn btn-blue">+ New DA</a>
+  </div>
+</div>
+
+<!-- Summary Cards -->
+<div class="stat-cards">
+  <div class="stat-card">
+    <div class="stat-card-label">Total DAs</div>
+    <div class="stat-card-value">{{ summary.total }}</div>
+  </div>
+  <div class="stat-card">
+    <div class="stat-card-label">Open / Draft</div>
+    <div class="stat-card-value" style="color:#D97706;">{{ turnaround.open_count }}</div>
+  </div>
+  <div class="stat-card">
+    <div class="stat-card-label">Completed This Month</div>
+    <div class="stat-card-value" style="color:#059669;">{{ turnaround.completed_this_month }}</div>
+  </div>
+  <div class="stat-card">
+    <div class="stat-card-label">Avg Turnaround</div>
+    <div class="stat-card-value">{{ '{:.1f}'.format(turnaround.avg_hours) }}h</div>
+  </div>
+</div>
+
+<!-- Discipline Level Breakdown -->
+{% if summary.level_counts %}
+<div class="card" style="padding:16px 20px; margin-bottom:16px; display:flex; gap:12px; align-items:center; flex-wrap:wrap;">
+  <span style="font-weight:600; font-size:13px; color:var(--text-light);">By Level:</span>
+  {% for level, count in summary.level_counts.items() %}
+  <span class="badge badge-{{ 'info' if 'Verbal' in level else 'warning' if 'Written' in level else 'danger' if 'Final' in level or 'Termination' in level else 'blue' }}">
+    {{ level }}: {{ count }}
+  </span>
+  {% endfor %}
+</div>
+{% endif %}
+
+<!-- History Table -->
+<div class="card" style="padding:20px;">
+  <div class="filter-bar" style="margin-bottom:16px;">
+    <div class="filter-search">
+      <span class="filter-search-icon">&#128269;</span>
+      <input type="text" placeholder="Search DAs..." oninput="filterTable(this.value, 'da-table')">
+    </div>
+    <form method="get" style="display:flex; gap:8px;">
+      <select name="status" class="filter-select" onchange="this.form.submit()">
+        <option value="">All Statuses</option>
+        <option {{ 'selected' if status_filter == 'draft' else '' }} value="draft">Draft</option>
+        <option {{ 'selected' if status_filter == 'pending_review' else '' }} value="pending_review">Pending Review</option>
+        <option {{ 'selected' if status_filter == 'delivered' else '' }} value="delivered">Delivered</option>
+        <option {{ 'selected' if status_filter == 'signed' else '' }} value="signed">Signed</option>
+        <option {{ 'selected' if status_filter == 'completed' else '' }} value="completed">Completed</option>
+      </select>
+    </form>
+  </div>
+
+  <div style="overflow-x:auto;">
+    <table class="data-table" id="da-table">
+      <thead>
+        <tr>
+          <th>DA ID</th>
+          <th>Employee</th>
+          <th>Site</th>
+          <th>Violation</th>
+          <th>Level</th>
+          <th>Status</th>
+          <th>Created</th>
+          <th>Actions</th>
+        </tr>
+      </thead>
+      <tbody>
+        {% for da in das %}
+        <tr>
+          <td class="font-mono" style="font-size:13px;">{{ da.da_id }}</td>
+          <td style="font-weight:600;">{{ da.employee_name }}</td>
+          <td>{{ da.site|site_name if da.site else '—' }}</td>
+          <td>{{ da.violation_type or '—' }}</td>
+          <td>
+            {% set level = da.discipline_level or '' %}
+            {% if level %}
+            <span class="badge badge-{{ 'info' if 'Verbal' in level else 'warning' if 'Written' in level else 'danger' if 'Final' in level or 'Termination' in level else 'blue' }}">{{ level }}</span>
+            {% else %}
+            <span style="color:var(--text-light);">—</span>
+            {% endif %}
+          </td>
+          <td>
+            {% set status = da.status or 'draft' %}
+            {% set status_colors = {'draft': 'warning', 'pending_review': 'blue', 'delivered': 'info', 'signed': 'success', 'completed': 'success'} %}
+            <span class="badge badge-{{ status_colors.get(status, 'warning') }}">{{ status|replace('_', ' ')|title }}</span>
+          </td>
+          <td style="font-size:13px;">{{ da.created_at[:10] if da.created_at else '—' }}</td>
+          <td>
+            <div style="display:flex; gap:6px; flex-wrap:wrap;">
+              <!-- Status Update -->
+              {% if status == 'draft' %}
+              <form method="post" action="{{ url_for('da_generator.update_status', da_id=da.da_id) }}" style="display:inline;">
+                <input type="hidden" name="status" value="pending_review">
+                <button type="submit" class="btn btn-sm btn-blue" title="Submit for review">Submit</button>
+              </form>
+              {% elif status == 'pending_review' %}
+              <form method="post" action="{{ url_for('da_generator.update_status', da_id=da.da_id) }}" style="display:inline;">
+                <input type="hidden" name="status" value="delivered">
+                <button type="submit" class="btn btn-sm btn-accent" title="Mark as delivered">Deliver</button>
+              </form>
+              {% elif status == 'delivered' %}
+              <form method="post" action="{{ url_for('da_generator.update_status', da_id=da.da_id) }}" style="display:inline;">
+                <input type="hidden" name="status" value="signed">
+                <button type="submit" class="btn btn-sm btn-accent" title="Mark as signed">Sign</button>
+              </form>
+              {% endif %}
+
+              <!-- Download PDF -->
+              <a href="{{ url_for('da_generator.download_pdf', da_id=da.da_id) }}" class="btn btn-sm btn-secondary" title="Download PDF">
+                &#128196; PDF
+              </a>
+
+              <!-- Edit (for drafts) -->
+              {% if status == 'draft' %}
+              <a href="{{ url_for('da_generator.new_da', da_id=da.da_id) }}" class="btn btn-sm btn-secondary" title="Edit draft">Edit</a>
+              {% endif %}
+
+              <!-- Delete (admin only) -->
+              <form method="post" action="{{ url_for('da_generator.delete_da', da_id=da.da_id) }}" style="display:inline;">
+                <button type="submit" class="btn btn-sm btn-danger"
+                        onclick="return confirm('Permanently delete DA {{ da.da_id }} ({{ da.employee_name }})? This cannot be undone.')">Delete</button>
+              </form>
+            </div>
+          </td>
+        </tr>
+        {% else %}
+        <tr><td colspan="8" style="text-align:center; color:var(--text-light); padding:32px;">No DAs found. <a href="{{ url_for('da_generator.new_da') }}">Create one</a></td></tr>
+        {% endfor %}
+      </tbody>
+    </table>
+  </div>
+  <div style="margin-top:12px; font-size:13px; color:var(--text-light);">
+    {{ das|length }} DA record{{ 's' if das|length != 1 else '' }}
+  </div>
+</div>
+
+<script>
+function filterTable(query, tableId) {
+  var rows = document.getElementById(tableId).querySelectorAll('tbody tr');
+  query = query.toLowerCase();
+  rows.forEach(function(row) {
+    row.style.display = row.textContent.toLowerCase().includes(query) ? '' : 'none';
+  });
+}
+</script>
+{% endblock %}

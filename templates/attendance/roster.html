@@ -1,0 +1,118 @@
+{% extends "base.html" %}
+{% block title %}Officer Roster — Attendance — Cerasus Hub{% endblock %}
+
+{% block tabs %}
+<div class="module-tabs">
+  <a href="{{ url_for('attendance.dashboard') }}" class="module-tab {{ 'active' if active_tab == 'dashboard' }}">Dashboard</a>
+  <a href="{{ url_for('attendance.roster') }}" class="module-tab {{ 'active' if active_tab == 'roster' }}">Roster</a>
+  <a href="{{ url_for('attendance.sites') }}" class="module-tab {{ 'active' if active_tab == 'sites' }}">Sites</a>
+  <a href="{{ url_for('attendance.log_infraction') }}" class="module-tab {{ 'active' if active_tab == 'log' }}">Log Infraction</a>
+  <a href="{{ url_for('attendance.discipline') }}" class="module-tab {{ 'active' if active_tab == 'discipline' }}">Discipline</a>
+  <a href="{{ url_for('attendance.reviews') }}" class="module-tab {{ 'active' if active_tab == 'reviews' }}">Reviews</a>
+  <a href="{{ url_for('attendance.reports') }}" class="module-tab {{ 'active' if active_tab == 'reports' }}">Reports</a>
+  <a href="{{ url_for('attendance.analytics') }}" class="module-tab {{ 'active' if active_tab == 'analytics' }}">Analytics</a>
+</div>
+{% endblock %}
+
+{% block content %}
+<div class="page-header">
+  <div>
+    <h1 class="page-title">Officer Roster</h1>
+    <p class="page-subtitle">All officers with attendance and discipline status</p>
+  </div>
+</div>
+
+<!-- Filter Bar -->
+<div class="filter-bar">
+  <form method="GET" action="{{ url_for('attendance.roster') }}" style="display:flex; gap:12px; align-items:center; flex-wrap:wrap; width:100%;">
+    <input type="text" name="q" value="{{ q }}" placeholder="Search by name or ID..." class="filter-search form-input" style="max-width:260px;">
+    <select name="site" class="filter-select form-input">
+      <option value="">All Sites</option>
+      {% for s in sites %}
+      <option value="{{ s }}" {{ 'selected' if site_filter == s }}>{{ s }}</option>
+      {% endfor %}
+    </select>
+    <select name="status" class="filter-select form-input">
+      <option value="">All Status</option>
+      <option value="Active" {{ 'selected' if status_filter == 'Active' }}>Active</option>
+      <option value="Inactive" {{ 'selected' if status_filter == 'Inactive' }}>Inactive</option>
+      <option value="Terminated" {{ 'selected' if status_filter == 'Terminated' }}>Terminated</option>
+    </select>
+    <button type="submit" class="btn btn-blue btn-sm">Filter</button>
+    {% if q or site_filter or status_filter %}
+    <a href="{{ url_for('attendance.roster') }}" class="btn btn-secondary btn-sm">Clear</a>
+    {% endif %}
+  </form>
+</div>
+
+<div class="card" style="margin-top:16px;">
+  <table class="data-table">
+    <thead>
+      <tr>
+        <th></th>
+        <th>Name</th>
+        <th>Employee ID</th>
+        <th>Site</th>
+        <th>Active Points</th>
+        <th>Discipline Level</th>
+        <th>Status</th>
+        <th>Actions</th>
+      </tr>
+    </thead>
+    <tbody>
+      {% for off in officers %}
+      <tr>
+        <td>
+          <div class="avatar" style="background:#C8102E; color:white; width:32px; height:32px; font-size:12px;">
+            {{ off.name[:2]|upper if off.name else '??' }}
+          </div>
+        </td>
+        <td style="font-weight:600;">{{ off.name }}</td>
+        <td>{{ off.employee_id or off.officer_id }}</td>
+        <td>{{ off.site }}</td>
+        <td>
+          <span style="font-weight:600; color:{% if off.active_points >= 10 %}#DC2626{% elif off.active_points >= 6 %}#D97706{% elif off.active_points >= 3 %}#F59E0B{% else %}#059669{% endif %};">
+            {{ off.active_points or 0 }}
+          </span>
+        </td>
+        <td>
+          {% set level = off.discipline_level or 'None' %}
+          {% if level == 'Termination Eligible' or level == 'Termination Flag' %}
+            <span class="badge badge-danger">{{ level }}</span>
+          {% elif level == 'Employment Review' %}
+            <span class="badge badge-warning">{{ level }}</span>
+          {% elif level == 'Written Warning' %}
+            <span class="badge badge-warning">{{ level }}</span>
+          {% elif level == 'Verbal Warning' %}
+            <span class="badge badge-info">{{ level }}</span>
+          {% else %}
+            <span class="badge badge-success">{{ level }}</span>
+          {% endif %}
+        </td>
+        <td>
+          {% if off.status == 'Active' %}
+            <span class="badge badge-success">Active</span>
+          {% elif off.status == 'Inactive' %}
+            <span class="badge badge-warning">Inactive</span>
+          {% else %}
+            <span class="badge badge-danger">{{ off.status }}</span>
+          {% endif %}
+        </td>
+        <td>
+          <a href="{{ url_for('attendance.discipline', q=off.employee_id or off.officer_id) }}" class="btn btn-secondary btn-sm">View</a>
+          <a href="{{ url_for('attendance.officer_da_options', employee_id=off.employee_id or off.officer_id) }}" class="btn btn-sm" style="background:#B91C1C;color:white;text-decoration:none;" title="Create Attendance DA">DA</a>
+        </td>
+      </tr>
+      {% else %}
+      <tr>
+        <td colspan="8" style="text-align:center; color:var(--text-light); padding:24px;">No officers found.</td>
+      </tr>
+      {% endfor %}
+    </tbody>
+  </table>
+</div>
+
+<div style="margin-top:12px; font-size:13px; color:var(--text-light);">
+  Showing {{ officers|length }} officer{{ 's' if officers|length != 1 }}
+</div>
+{% endblock %}

@@ -1,0 +1,72 @@
+{% extends "base.html" %}
+{% block title %}Audit Trail — Cerasus Hub{% endblock %}
+
+{% block tabs %}
+<div class="module-tabs">
+  <a href="{{ url_for('admin.users') }}" class="module-tab">&#128101; Users</a>
+  <a href="{{ url_for('hub.people') }}" class="module-tab">&#127970; People & Sites</a>
+  <a href="{{ url_for('admin.audit_page') }}" class="module-tab active">&#128203; Audit Log</a>
+  <a href="{{ url_for('admin.settings') }}" class="module-tab">&#9881; Settings</a>
+</div>
+{% endblock %}
+
+{% block content %}
+<div class="page-header">
+  <div>
+    <h1 class="page-title">Admin Panel</h1>
+    <p class="page-subtitle">System administration and configuration</p>
+  </div>
+</div>
+
+<div class="card" style="padding:20px;">
+  <div class="filter-bar" style="border:none; padding:0 0 16px; margin-bottom:0;">
+    <div class="filter-search">
+      <span class="filter-search-icon">&#128269;</span>
+      <input type="text" placeholder="Search audit events..." id="audit-search" oninput="filterAudit()">
+    </div>
+    <select class="filter-select" id="module-filter" onchange="filterAudit()">
+      <option value="">All Modules</option>
+      <option value="hub">hub</option>
+      <option value="operations">operations</option>
+      <option value="uniforms">uniforms</option>
+      <option value="attendance">attendance</option>
+      <option value="training">training</option>
+      <option value="backup">backup</option>
+    </select>
+  </div>
+
+  <div style="overflow-x:auto; max-height:600px; overflow-y:auto;">
+    <table class="data-table" id="audit-table">
+      <thead>
+        <tr><th>Timestamp</th><th>User</th><th>Module</th><th>Action</th><th>Details</th></tr>
+      </thead>
+      <tbody>
+        {% for e in events %}
+        <tr data-module="{{ e.module_name or 'hub' }}">
+          <td style="white-space:nowrap; font-size:12px; color:var(--text-light);">{{ e.timestamp[:19].replace('T', ' ') if 'T' in (e.timestamp or '') else e.timestamp }}</td>
+          <td style="font-weight:600;">{{ e.username }}</td>
+          <td><span class="badge badge-info">{{ e.module_name or 'hub' }}</span></td>
+          <td>{{ e.action or '—' }}</td>
+          <td class="text-light" style="font-size:12px; max-width:400px; overflow:hidden; text-overflow:ellipsis; white-space:nowrap;">{{ e.details or '—' }}</td>
+        </tr>
+        {% else %}
+        <tr><td colspan="5" style="text-align:center; color:var(--text-light); padding:32px;">No audit events</td></tr>
+        {% endfor %}
+      </tbody>
+    </table>
+  </div>
+</div>
+
+<script>
+function filterAudit() {
+  var query = document.getElementById('audit-search').value.toLowerCase();
+  var moduleFilter = document.getElementById('module-filter').value;
+  var rows = document.getElementById('audit-table').querySelectorAll('tbody tr');
+  rows.forEach(function(row) {
+    var matchText = !query || row.textContent.toLowerCase().includes(query);
+    var matchModule = !moduleFilter || row.dataset.module === moduleFilter;
+    row.style.display = (matchText && matchModule) ? '' : 'none';
+  });
+}
+</script>
+{% endblock %}

@@ -1,0 +1,128 @@
+{% extends "base.html" %}
+{% block title %}Templates — DA Generator — Cerasus Hub{% endblock %}
+
+{% block tabs %}
+<div class="module-tabs">
+  {% for section_title, section_items in sidebar_sections %}
+    {% for label, endpoint in section_items %}
+    <a href="{{ url_for(endpoint) }}" class="module-tab {{ 'active' if active_tab == label else '' }}">{{ label }}</a>
+    {% endfor %}
+  {% endfor %}
+</div>
+{% endblock %}
+
+{% block content %}
+<div class="page-header">
+  <div>
+    <h1 class="page-title">DA Templates</h1>
+    <p class="page-subtitle">Narrative templates, citations, and escalation language for DA documents</p>
+  </div>
+</div>
+
+<!-- Template Categories -->
+<div class="card" style="padding:24px; margin-bottom:24px;">
+  <h2 class="section-title" style="margin-bottom:16px;">Template Overview</h2>
+  <p style="font-size:13px; color:var(--text-light); margin-bottom:20px;">
+    Templates use placeholders that are automatically filled when generating a DA:
+    <code>{employee}</code>, <code>{position}</code>, <code>{site}</code>, <code>{dates}</code>,
+    <code>{narrative}</code>, <code>{points}</code>, <code>{prior_summary}</code>, <code>{coaching_summary}</code>
+  </p>
+
+  <div style="display:grid; grid-template-columns:repeat(auto-fill, minmax(280px, 1fr)); gap:16px;">
+    <!-- Narrative Template -->
+    <div class="card" style="padding:20px; border:1px solid var(--border);">
+      <div style="font-size:24px; margin-bottom:8px;">&#128221;</div>
+      <h3 style="margin:0 0 8px 0; font-size:16px;">Narrative Templates</h3>
+      <p style="font-size:13px; color:var(--text-light); margin-bottom:12px;">
+        Opening narratives for each discipline level describing the violation and context.
+      </p>
+      <div style="display:flex; gap:6px; flex-wrap:wrap;">
+        {% for level in discipline_levels %}
+        <span class="badge badge-{{ 'info' if 'Verbal' in level else 'warning' if 'Written' in level else 'danger' }}">{{ level }}</span>
+        {% endfor %}
+      </div>
+      {% if saved_templates.get('narrative_template') %}
+      <div style="margin-top:12px;">
+        <span class="badge badge-success">Customized</span>
+      </div>
+      {% endif %}
+    </div>
+
+    <!-- Citations Template -->
+    <div class="card" style="padding:20px; border:1px solid var(--border);">
+      <div style="font-size:24px; margin-bottom:8px;">&#128218;</div>
+      <h3 style="margin:0 0 8px 0; font-size:16px;">Citation Templates</h3>
+      <p style="font-size:13px; color:var(--text-light); margin-bottom:12px;">
+        Policy citations and handbook references that support the disciplinary action.
+      </p>
+      <div style="display:flex; gap:6px; flex-wrap:wrap;">
+        <span class="badge badge-info">Attendance (Type A)</span>
+        <span class="badge badge-info">Performance (Type B)</span>
+        <span class="badge badge-info">Employment (Type C)</span>
+      </div>
+      {% if saved_templates.get('citations_template') %}
+      <div style="margin-top:12px;">
+        <span class="badge badge-success">Customized</span>
+      </div>
+      {% endif %}
+    </div>
+
+    <!-- Improvements Template -->
+    <div class="card" style="padding:20px; border:1px solid var(--border);">
+      <div style="font-size:24px; margin-bottom:8px;">&#127919;</div>
+      <h3 style="margin:0 0 8px 0; font-size:16px;">Required Improvements</h3>
+      <p style="font-size:13px; color:var(--text-light); margin-bottom:12px;">
+        Standard improvement expectations and corrective action plans by violation type.
+      </p>
+      <div style="display:flex; gap:6px; flex-wrap:wrap;">
+        <span class="badge badge-blue">Attendance</span>
+        <span class="badge badge-blue">Conduct</span>
+        <span class="badge badge-blue">Performance</span>
+      </div>
+      {% if saved_templates.get('improvements_template') %}
+      <div style="margin-top:12px;">
+        <span class="badge badge-success">Customized</span>
+      </div>
+      {% endif %}
+    </div>
+
+    <!-- Escalation Language -->
+    <div class="card" style="padding:20px; border:1px solid var(--border);">
+      <div style="font-size:24px; margin-bottom:8px;">&#9888;</div>
+      <h3 style="margin:0 0 8px 0; font-size:16px;">Escalation Language</h3>
+      <p style="font-size:13px; color:var(--text-light); margin-bottom:12px;">
+        Progressive discipline escalation warnings that accompany each DA level.
+      </p>
+      <div style="display:flex; gap:6px; flex-wrap:wrap;">
+        <span class="badge badge-warning">Verbal &#8594; Written</span>
+        <span class="badge badge-warning">Written &#8594; Final</span>
+        <span class="badge badge-danger">Final &#8594; Termination</span>
+      </div>
+    </div>
+  </div>
+</div>
+
+<!-- Template Management Info -->
+<div class="card" style="padding:24px;">
+  <h2 class="section-title" style="margin-bottom:12px;">Template Customization</h2>
+  <p style="font-size:13px; color:var(--text-light); margin-bottom:16px;">
+    Templates are organized by review category (Attendance, Performance/Conduct, Employment Review)
+    and by discipline level. Default templates ship with the application and are used as fallbacks
+    when no custom template is configured.
+  </p>
+  <div style="display:grid; grid-template-columns:1fr 1fr 1fr; gap:16px;">
+    <div style="padding:16px; background:var(--bg); border-radius:8px; border:1px solid var(--border);">
+      <div style="font-weight:700; margin-bottom:4px;">Attendance (Type A)</div>
+      <div style="font-size:13px; color:var(--text-light);">Point-based attendance tracking and progressive discipline thresholds.</div>
+    </div>
+    <div style="padding:16px; background:var(--bg); border-radius:8px; border:1px solid var(--border);">
+      <div style="font-weight:700; margin-bottom:4px;">Performance (Type B)</div>
+      <div style="font-size:13px; color:var(--text-light);">Conduct violations, policy breaches, and job performance issues.</div>
+    </div>
+    <div style="padding:16px; background:var(--bg); border-radius:8px; border:1px solid var(--border);">
+      <div style="font-weight:700; margin-bottom:4px;">Employment (Type C)</div>
+      <div style="font-size:13px; color:var(--text-light);">Serious infractions and employment status reviews.</div>
+    </div>
+  </div>
+</div>
+{% endblock %}

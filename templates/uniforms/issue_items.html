@@ -1,0 +1,132 @@
+{% extends "base.html" %}
+{% block title %}Issue Items — Uniforms — Cerasus Hub{% endblock %}
+
+{% block tabs %}
+<div class="module-tabs">
+  {% for section_title, section_items in sidebar_sections %}
+    {% for label, endpoint in section_items %}
+    <a href="{{ url_for(endpoint) }}" class="module-tab {{ 'active' if active_tab == label else '' }}">{{ label }}</a>
+    {% endfor %}
+  {% endfor %}
+</div>
+{% endblock %}
+
+{% block content %}
+<div class="page-header">
+  <div>
+    <h1 class="page-title">Issue Uniform Items</h1>
+    <p class="page-subtitle">Issue uniforms or equipment to an officer</p>
+  </div>
+</div>
+
+<div class="card" style="padding:24px; max-width:800px;">
+  <form method="post" action="{{ url_for('uniforms.issue_items') }}">
+    <div style="display:grid; grid-template-columns:1fr 1fr; gap:16px;">
+      <!-- Officer -->
+      <div>
+        <label class="form-label">Officer *</label>
+        <select name="officer_id" class="form-input" required id="officer-select" onchange="updateOfficerName()">
+          <option value="">Select officer...</option>
+          {% for o in officers %}
+          <option value="{{ o.officer_id }}" data-name="{{ o.name }}">{{ o.name }} — {{ o.site or 'No site' }}</option>
+          {% endfor %}
+        </select>
+        <input type="hidden" name="officer_name" id="officer-name-hidden">
+      </div>
+
+      <!-- Item -->
+      <div>
+        <label class="form-label">Catalog Item *</label>
+        <select name="item_id" class="form-input" required id="item-select" onchange="updateItemName()">
+          <option value="">Select item...</option>
+          {% for c in catalog %}
+          <option value="{{ c.item_id }}" data-name="{{ c.name }}" data-category="{{ c.category }}"
+                  data-cost="{{ c.unit_cost }}">
+            {{ c.name }} ({{ c.category }}) — ${{ '{:.2f}'.format(c.unit_cost) }} — Stock: {{ c.stock_qty }}
+          </option>
+          {% endfor %}
+        </select>
+        <input type="hidden" name="item_name" id="item-name-hidden">
+      </div>
+
+      <!-- Size -->
+      <div>
+        <label class="form-label">Size</label>
+        <input type="text" name="size" class="form-input" placeholder="e.g. M, L, XL, 32x30">
+      </div>
+
+      <!-- Quantity -->
+      <div>
+        <label class="form-label">Quantity *</label>
+        <input type="number" name="quantity" class="form-input" value="1" min="1" max="50" required>
+      </div>
+
+      <!-- Condition -->
+      <div>
+        <label class="form-label">Condition</label>
+        <select name="condition_issued" class="form-input">
+          <option>New</option>
+          <option>Good</option>
+          <option>Fair</option>
+          <option>Refurbished</option>
+        </select>
+      </div>
+
+      <!-- Date Issued -->
+      <div>
+        <label class="form-label">Date Issued *</label>
+        <input type="date" name="date_issued" class="form-input" required>
+      </div>
+
+      <!-- Issued By -->
+      <div>
+        <label class="form-label">Issued By</label>
+        <input type="text" name="issued_by" class="form-input"
+               value="{{ current_user.display_name if current_user else '' }}">
+      </div>
+
+      <!-- Location -->
+      <div>
+        <label class="form-label">Storage Location</label>
+        <select name="location" class="form-input">
+          <option value="">Select location...</option>
+          {% for loc in locations %}
+          <option>{{ loc }}</option>
+          {% endfor %}
+        </select>
+      </div>
+    </div>
+
+    <!-- Notes -->
+    <div style="margin-top:16px;">
+      <label class="form-label">Notes</label>
+      <textarea name="notes" class="form-input" rows="3" placeholder="Optional notes..."></textarea>
+    </div>
+
+    <div style="margin-top:20px; display:flex; gap:12px;">
+      <button type="submit" class="btn btn-blue">Issue Item</button>
+      <a href="{{ url_for('uniforms.dashboard') }}" class="btn btn-secondary">Cancel</a>
+    </div>
+  </form>
+</div>
+
+<script>
+function updateOfficerName() {
+  var sel = document.getElementById('officer-select');
+  var opt = sel.options[sel.selectedIndex];
+  document.getElementById('officer-name-hidden').value = opt.dataset.name || '';
+}
+function updateItemName() {
+  var sel = document.getElementById('item-select');
+  var opt = sel.options[sel.selectedIndex];
+  document.getElementById('item-name-hidden').value = opt.dataset.name || '';
+}
+// Set today as default date
+document.addEventListener('DOMContentLoaded', function() {
+  var dateInput = document.querySelector('input[name="date_issued"]');
+  if (dateInput && !dateInput.value) {
+    dateInput.value = new Date().toISOString().split('T')[0];
+  }
+});
+</script>
+{% endblock %}

@@ -1,0 +1,267 @@
+{% extends "operations/_layout.html" %}
+{% block page_title %}Officers{% endblock %}
+{% block breadcrumb_tail %}
+<span class="sep">&#8250;</span><span class="current">Officers</span>
+{% endblock %}
+
+{% block page_content %}
+<div class="page-header">
+  <div>
+    <h1 class="page-title">Flex Officers</h1>
+    <p class="page-subtitle">Manage flex team members</p>
+  </div>
+  <button class="btn btn-blue" onclick="document.getElementById('createOfficerModal').style.display='flex'">+ New Officer</button>
+</div>
+
+<!-- Filters -->
+<div class="filter-bar">
+  <form method="get" style="display:flex;gap:8px;align-items:center;flex-wrap:wrap;width:100%;">
+    <input type="text" name="q" value="{{ q }}" placeholder="Search by name or ID..." class="filter-search">
+    <select name="status" class="filter-select" onchange="this.form.submit()">
+      <option value="Active" {% if status_filter == 'Active' %}selected{% endif %}>Active</option>
+      <option value="all" {% if status_filter == 'all' %}selected{% endif %}>All</option>
+      <option value="Inactive" {% if status_filter == 'Inactive' %}selected{% endif %}>Inactive</option>
+    </select>
+    <button type="submit" class="btn btn-blue btn-sm">Search</button>
+    {% if q or status_filter != 'Active' %}
+    <a href="{{ url_for('operations.officers') }}" class="btn btn-secondary btn-sm">Clear</a>
+    {% endif %}
+  </form>
+</div>
+
+<div style="margin:8px 0;color:var(--text-light);font-size:13px;">{{ officers|length }} officer{{ 's' if officers|length != 1 else '' }}</div>
+
+<!-- Officers Table -->
+<table class="data-table">
+  <thead>
+    <tr>
+      <th>Name</th>
+      <th>Employee ID</th>
+      <th>Role</th>
+      <th>Site</th>
+      <th>Hours</th>
+      <th>Hire Date</th>
+      <th>Status</th>
+      <th>Contact</th>
+      <th>Actions</th>
+    </tr>
+  </thead>
+  <tbody>
+    {% for off in officers %}
+    <tr>
+      <td>
+        <div style="display:flex;align-items:center;gap:8px;">
+          <span class="avatar" style="width:28px;height:28px;font-size:11px;">{{ off.name[:2]|upper if off.name else '??' }}</span>
+          <div>
+            <strong>{{ off.name|officer_link(off.member_id) if off.name else 'N/A' }}</strong>
+            {% if off.first_name or off.last_name %}
+            <div style="font-size:11px;color:var(--text-light);">{{ off.first_name }} {{ off.last_name }}</div>
+            {% endif %}
+          </div>
+        </div>
+      </td>
+      <td>{{ off.employee_id or '—' }}</td>
+      <td>{{ off.role or off.job_title or '—' }}</td>
+      <td>{{ off.site or '—' }}</td>
+      <td>{{ off.weekly_hours or '—' }}</td>
+      <td>{{ off.hire_date or '—' }}</td>
+      <td>
+        {% if off.status == 'Active' %}
+        <span class="badge badge-success">Active</span>
+        {% else %}
+        <span class="badge badge-danger">{{ off.status }}</span>
+        {% endif %}
+      </td>
+      <td style="font-size:12px;">
+        {{ off.phone or '' }}<br>
+        {{ off.email or '' }}
+      </td>
+      <td style="white-space:nowrap;">
+        <button class="btn btn-secondary btn-sm"
+          onclick="openEditOfficer({{ off|tojson|forceescape }})">Edit</button>
+        <form method="post" action="{{ url_for('operations.officers_delete', member_id=off.member_id) }}" style="display:inline;" onsubmit="return confirm('Delete this officer?')">
+          <button type="submit" class="btn btn-danger btn-sm">Del</button>
+        </form>
+      </td>
+    </tr>
+    {% endfor %}
+    {% if not officers %}
+    <tr><td colspan="9" style="text-align:center;color:var(--text-light);padding:32px;">No officers found.</td></tr>
+    {% endif %}
+  </tbody>
+</table>
+
+<!-- Create Officer Modal -->
+<div id="createOfficerModal" class="modal-overlay" style="display:none;">
+  <div class="modal-card" style="max-width:560px;">
+    <h2 class="section-title">New Officer</h2>
+    <form method="post" action="{{ url_for('operations.officers_create') }}">
+      <div style="display:grid;grid-template-columns:1fr 1fr;gap:12px;">
+        <div>
+          <label class="form-label">First Name</label>
+          <input type="text" name="first_name" class="form-input" required>
+        </div>
+        <div>
+          <label class="form-label">Last Name</label>
+          <input type="text" name="last_name" class="form-input" required>
+        </div>
+        <div>
+          <label class="form-label">Employee ID</label>
+          <input type="text" name="employee_id" class="form-input">
+        </div>
+        <div>
+          <label class="form-label">Email</label>
+          <input type="email" name="email" class="form-input">
+        </div>
+        <div>
+          <label class="form-label">Phone</label>
+          <input type="text" name="phone" class="form-input">
+        </div>
+        <div>
+          <label class="form-label">Job Title</label>
+          <input type="text" name="job_title" class="form-input" value="Flex Officer">
+        </div>
+        <div>
+          <label class="form-label">Role</label>
+          <select name="role" class="form-input">
+            <option>Flex Officer</option>
+            <option>Supervisor</option>
+            <option>Lead</option>
+          </select>
+        </div>
+        <div>
+          <label class="form-label">Primary Site</label>
+          <select name="site" class="form-input">
+            <option value="">None</option>
+            {% for s in sites %}
+            <option value="{{ s }}">{{ s }}</option>
+            {% endfor %}
+          </select>
+        </div>
+        <div>
+          <label class="form-label">Weekly Hours</label>
+          <input type="text" name="weekly_hours" class="form-input" value="40">
+        </div>
+        <div>
+          <label class="form-label">Hire Date</label>
+          <input type="date" name="hire_date" class="form-input">
+        </div>
+        <div>
+          <label class="form-label">Status</label>
+          <select name="status" class="form-input">
+            <option>Active</option>
+            <option>Inactive</option>
+          </select>
+        </div>
+      </div>
+      <div style="margin-top:12px;">
+        <label class="form-label">Notes</label>
+        <textarea name="notes" class="form-input" rows="2"></textarea>
+      </div>
+      <div style="margin-top:16px;display:flex;gap:8px;justify-content:flex-end;">
+        <button type="button" class="btn btn-secondary" onclick="this.closest('.modal-overlay').style.display='none'">Cancel</button>
+        <button type="submit" class="btn btn-blue">Create Officer</button>
+      </div>
+    </form>
+  </div>
+</div>
+
+<!-- Edit Officer Modal -->
+<div id="editOfficerModal" class="modal-overlay" style="display:none;">
+  <div class="modal-card" style="max-width:560px;">
+    <h2 class="section-title">Edit Officer</h2>
+    <form method="post" id="editOfficerForm">
+      <div style="display:grid;grid-template-columns:1fr 1fr;gap:12px;">
+        <div>
+          <label class="form-label">First Name</label>
+          <input type="text" name="first_name" id="editOffFirstName" class="form-input">
+        </div>
+        <div>
+          <label class="form-label">Last Name</label>
+          <input type="text" name="last_name" id="editOffLastName" class="form-input">
+        </div>
+        <div style="grid-column:span 2;">
+          <label class="form-label">Display Name</label>
+          <input type="text" name="name" id="editOffName" class="form-input">
+        </div>
+        <div>
+          <label class="form-label">Employee ID</label>
+          <input type="text" name="employee_id" id="editOffEmpId" class="form-input">
+        </div>
+        <div>
+          <label class="form-label">Email</label>
+          <input type="email" name="email" id="editOffEmail" class="form-input">
+        </div>
+        <div>
+          <label class="form-label">Phone</label>
+          <input type="text" name="phone" id="editOffPhone" class="form-input">
+        </div>
+        <div>
+          <label class="form-label">Job Title</label>
+          <input type="text" name="job_title" id="editOffJobTitle" class="form-input">
+        </div>
+        <div>
+          <label class="form-label">Role</label>
+          <select name="role" id="editOffRole" class="form-input">
+            <option>Flex Officer</option>
+            <option>Supervisor</option>
+            <option>Lead</option>
+          </select>
+        </div>
+        <div>
+          <label class="form-label">Primary Site</label>
+          <select name="site" id="editOffSite" class="form-input">
+            <option value="">None</option>
+            {% for s in sites %}
+            <option value="{{ s }}">{{ s }}</option>
+            {% endfor %}
+          </select>
+        </div>
+        <div>
+          <label class="form-label">Weekly Hours</label>
+          <input type="text" name="weekly_hours" id="editOffHours" class="form-input">
+        </div>
+        <div>
+          <label class="form-label">Hire Date</label>
+          <input type="date" name="hire_date" id="editOffHireDate" class="form-input">
+        </div>
+        <div>
+          <label class="form-label">Status</label>
+          <select name="status" id="editOffStatus" class="form-input">
+            <option>Active</option>
+            <option>Inactive</option>
+          </select>
+        </div>
+      </div>
+      <div style="margin-top:12px;">
+        <label class="form-label">Notes</label>
+        <textarea name="notes" id="editOffNotes" class="form-input" rows="2"></textarea>
+      </div>
+      <div style="margin-top:16px;display:flex;gap:8px;justify-content:flex-end;">
+        <button type="button" class="btn btn-secondary" onclick="this.closest('.modal-overlay').style.display='none'">Cancel</button>
+        <button type="submit" class="btn btn-blue">Save Changes</button>
+      </div>
+    </form>
+  </div>
+</div>
+
+<script>
+function openEditOfficer(off) {
+  document.getElementById('editOfficerForm').action = '/module/operations/officers/' + off.member_id + '/edit';
+  document.getElementById('editOffFirstName').value = off.first_name || '';
+  document.getElementById('editOffLastName').value = off.last_name || '';
+  document.getElementById('editOffName').value = off.name || '';
+  document.getElementById('editOffEmpId').value = off.employee_id || '';
+  document.getElementById('editOffEmail').value = off.email || '';
+  document.getElementById('editOffPhone').value = off.phone || '';
+  document.getElementById('editOffJobTitle').value = off.job_title || '';
+  document.getElementById('editOffRole').value = off.role || 'Flex Officer';
+  document.getElementById('editOffSite').value = off.site || '';
+  document.getElementById('editOffHours').value = off.weekly_hours || '40';
+  document.getElementById('editOffHireDate').value = off.hire_date || '';
+  document.getElementById('editOffStatus').value = off.status || 'Active';
+  document.getElementById('editOffNotes').value = off.notes || '';
+  document.getElementById('editOfficerModal').style.display = 'flex';
+}
+</script>
+{% endblock %}

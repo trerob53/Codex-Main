@@ -1,0 +1,179 @@
+{% extends "base.html" %}
+{% block title %}Stock — Uniforms — Cerasus Hub{% endblock %}
+
+{% block tabs %}
+<div class="module-tabs">
+  {% for section_title, section_items in sidebar_sections %}
+    {% for label, endpoint in section_items %}
+    <a href="{{ url_for(endpoint) }}" class="module-tab {{ 'active' if active_tab == label else '' }}">{{ label }}</a>
+    {% endfor %}
+  {% endfor %}
+</div>
+{% endblock %}
+
+{% block content %}
+<div class="page-header">
+  <div>
+    <h1 class="page-title">Uniform Catalog &amp; Stock</h1>
+    <p class="page-subtitle">Inventory by item, size, and storage location</p>
+  </div>
+</div>
+
+<!-- Low Stock Alert -->
+{% if low_stock %}
+<div class="card" style="padding:16px 20px; margin-bottom:16px; border-left:4px solid #D97706; display:flex; align-items:center; gap:12px;">
+  <span style="font-size:20px;">&#9888;</span>
+  <div>
+    <strong>{{ low_stock|length }} item{{ 's' if low_stock|length != 1 else '' }} below reorder point</strong>
+    <span style="color:var(--text-light); margin-left:8px;">
+      {% for item in low_stock[:5] %}{{ item.name }}{% if not loop.last %}, {% endif %}{% endfor %}{% if low_stock|length > 5 %} and {{ low_stock|length - 5 }} more{% endif %}
+    </span>
+  </div>
+</div>
+{% endif %}
+
+<!-- Location Legend -->
+<div style="display:flex; gap:16px; margin-bottom:16px; font-size:13px;">
+  {% for loc in locations %}
+  <div style="display:flex; align-items:center; gap:6px;">
+    <div style="width:12px; height:12px; border-radius:3px; background:{{ '#3B82F6' if loop.index == 1 else '#059669' if loop.index == 2 else '#D97706' }};"></div>
+    <span>{{ loc }}</span>
+  </div>
+  {% endfor %}
+</div>
+
+<div class="card" style="padding:20px;">
+  <div class="filter-bar" style="margin-bottom:16px;">
+    <div class="filter-search">
+      <span class="filter-search-icon">&#128269;</span>
+      <input type="text" placeholder="Search catalog..." oninput="filterTable(this.value)">
+    </div>
+    <select class="filter-select" id="cat-filter" onchange="applyFilters()">
+      <option value="">All Categories</option>
+      {% set cats = catalog|map(attribute='category')|unique|sort %}
+      {% for c in cats %}
+      <option>{{ c }}</option>
+      {% endfor %}
+    </select>
+    <select class="filter-select" id="stock-filter" onchange="applyFilters()">
+      <option value="">All Stock Levels</option>
+      <option value="low">Low Stock Only</option>
+      <option value="in">In Stock</option>
+      <option value="out">Out of Stock</option>
+    </select>
+  </div>
+
+  {% for item in catalog %}
+  {% set is_low = item.stock_qty <= item.reorder_point %}
+  {% set is_out = item.stock_qty == 0 %}
+  <div class="stock-item" data-category="{{ item.category }}" data-stock="{{ 'out' if is_out else 'low' if is_low else 'in' }}" style="border:1px solid var(--border); border-radius:var(--radius); margin-bottom:12px; overflow:hidden;">
+    <!-- Item Header (clickable) -->
+    <div onclick="toggleGrid('grid-{{ item.item_id }}')" style="display:flex; align-items:center; justify-content:space-between; padding:14px 18px; cursor:pointer; background:var(--hover);">
+      <div style="display:flex; align-items:center; gap:16px;">
+        <div style="font-weight:700;">{{ item.name }}</div>
+        <span class="badge badge-info" style="font-size:11px;">{{ item.category }}</span>
+        {% if item.style %}<span style="font-size:12px; color:var(--text-light);">{{ item.style }}</span>{% endif %}
+        {% if item.gender %}<span style="font-size:12px; color:var(--text-light);">&bull; {{ item.gender }}</span>{% endif %}
+      </div>
+      <div style="display:flex; align-items:center; gap:16px;">
+        <span style="font-size:13px; color:var(--text-light);">${{ '{:.2f}'.format(item.unit_cost) }}/ea</span>
+        <span style="font-weight:700; font-size:16px; color:{{ '#DC2626' if is_out else '#D97706' if is_low else 'var(--success)' }};">{{ item.stock_qty }}</span>
+        {% if is_out %}
+        <span class="badge badge-danger">Out of Stock</span>
+        {% elif is_low %}
+        <span class="badge badge-warning">Low Stock</span>
+        {% else %}
+        <span class="badge badge-success">In Stock</span>
+        {% endif %}
+        <span style="font-size:12px; color:var(--text-light);">&#9660;</span>
+      </div>
+    </div>
+
+    <!-- Size x Location Grid (hidden by default) -->
+    <div id="grid-{{ item.item_id }}" style="display:none; padding:16px 18px; border-top:1px solid var(--border);">
+      <form method="post" action="{{ url_for('uniforms.stock') }}">
+        <input type="hidden" name="action" value="update_stock">
+        <input type="hidden" name="item_id" value="{{ item.item_id }}">
+        <table style="width:100%; border-collapse:collapse; font-size:13px;">
+          <thead>
+            <tr>
+              <th style="text-align:left; padding:6px 10px; font-size:11px; text-transform:uppercase; letter-spacing:0.5px; color:var(--text-light);">Location</th>
+              {% for size in sizes %}
+              <th style="text-align:center; padding:6px 8px; font-size:11px; text-transform:uppercase; letter-spacing:0.5px; color:var(--text-light); min-width:55px;">{{ size }}</th>
+              {% endfor %}
+              <th style="text-align:center; padding:6px 8px; font-size:11px; font-weight:700; color:var(--text);">Total</th>
+            </tr>
+          </thead>
+          <tbody>
+            {% for loc in locations %}
+            {% set loc_data = item.size_grid.get(loc, {}) %}
+            {% set loc_total = loc_data.values()|sum %}
+            <tr style="border-top:1px solid var(--border);">
+              <td style="padding:8px 10px; font-weight:600;">
+                <div style="display:flex; align-items:center; gap:6px;">
+                  <div style="width:8px; height:8px; border-radius:2px; background:{{ '#3B82F6' if loop.index == 1 else '#059669' if loop.index == 2 else '#D97706' }};"></div>
+                  {{ loc }}
+                </div>
+              </td>
+              {% for size in sizes %}
+              {% set qty = loc_data.get(size, 0) %}
+              <td style="text-align:center; padding:4px;">
+                <input type="number" name="qty_{{ loc }}_{{ size }}" value="{{ qty }}" min="0"
+                       style="width:48px; text-align:center; padding:4px; border:1px solid var(--border); border-radius:4px; background:var(--card); color:var(--text); font-size:13px;
+                       {{ 'color:#DC2626; font-weight:700;' if qty == 0 else '' }}">
+              </td>
+              {% endfor %}
+              <td style="text-align:center; padding:8px; font-weight:700;">{{ loc_total }}</td>
+            </tr>
+            {% endfor %}
+            <!-- Totals Row -->
+            <tr style="border-top:2px solid var(--border);">
+              <td style="padding:8px 10px; font-weight:700;">All Locations</td>
+              {% for size in sizes %}
+              {% set size_total = 0 %}
+              {% for loc in locations %}{% set size_total = size_total + item.size_grid.get(loc, {}).get(size, 0) %}{% endfor %}
+              <td style="text-align:center; padding:8px; font-weight:700;">{{ size_total }}</td>
+              {% endfor %}
+              <td style="text-align:center; padding:8px; font-weight:800; font-size:15px;">{{ item.stock_qty }}</td>
+            </tr>
+          </tbody>
+        </table>
+        <div style="margin-top:12px; display:flex; justify-content:space-between; align-items:center;">
+          <span style="font-size:12px; color:var(--text-light);">Reorder point: {{ item.reorder_point }}</span>
+          <button type="submit" class="btn btn-blue btn-sm">Save Stock</button>
+        </div>
+      </form>
+    </div>
+  </div>
+  {% else %}
+  <div style="text-align:center; color:var(--text-light); padding:48px;">No catalog items</div>
+  {% endfor %}
+
+  <div style="margin-top:12px; font-size:13px; color:var(--text-light);">
+    {{ catalog|length }} catalog item{{ 's' if catalog|length != 1 else '' }} &bull;
+    {{ locations|length }} locations &bull;
+    {{ sizes|length }} sizes tracked
+  </div>
+</div>
+
+<script>
+function toggleGrid(id) {
+  var el = document.getElementById(id);
+  el.style.display = el.style.display === 'none' ? 'block' : 'none';
+}
+function filterTable(query) { applyFilters(query); }
+function applyFilters(query) {
+  if (query === undefined) query = document.querySelector('.filter-search input').value;
+  var items = document.querySelectorAll('.stock-item');
+  var catFilter = document.getElementById('cat-filter').value;
+  var stockFilter = document.getElementById('stock-filter').value;
+  query = (query || '').toLowerCase();
+  items.forEach(function(item) {
+    var textMatch = !query || item.textContent.toLowerCase().includes(query);
+    var catMatch = !catFilter || item.dataset.category === catFilter;
+    var stockMatch = !stockFilter || item.dataset.stock === stockFilter;
+    item.style.display = textMatch && catMatch && stockMatch ? '' : 'none';
+  });
+}
+</script>
+{% endblock %}

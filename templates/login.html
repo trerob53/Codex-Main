@@ -1,0 +1,395 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+  <meta charset="UTF-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1.0">
+  <title>Cerasus Hub — Sign In</title>
+  <style>
+    * { margin: 0; padding: 0; box-sizing: border-box; }
+
+    body {
+      font-family: -apple-system, BlinkMacSystemFont, 'Segoe UI', Roboto, sans-serif;
+      min-height: 100vh;
+      overflow-x: hidden;
+    }
+
+    /* ── Full-screen hero background (matching cerasus.us) ── */
+    .hero-bg {
+      position: fixed;
+      inset: 0;
+      background: url("{{ url_for('static', filename='img/cerasus-hero-bg.jpg') }}") center center / cover no-repeat;
+      z-index: 0;
+    }
+
+    .hero-bg::after {
+      content: '';
+      position: absolute;
+      inset: 0;
+      background: linear-gradient(
+        to bottom,
+        rgba(10, 15, 30, 0.3) 0%,
+        rgba(10, 15, 30, 0.5) 40%,
+        rgba(10, 15, 30, 0.75) 100%
+      );
+    }
+
+    /* ── Top navigation bar (matching cerasus.us) ── */
+    .top-bar {
+      position: relative;
+      z-index: 10;
+      display: flex;
+      align-items: center;
+      justify-content: space-between;
+      padding: 10px 40px;
+      background: rgba(255, 255, 255, 0.95);
+      border-bottom: 2px solid #AF1E46;
+    }
+
+    .top-bar-logo img {
+      height: 24px;
+      display: block;
+    }
+
+    .top-bar-nav {
+      display: flex;
+      gap: 32px;
+    }
+
+    .top-bar-nav a {
+      text-decoration: none;
+      font-size: 13px;
+      font-weight: 500;
+      letter-spacing: 1px;
+      text-transform: lowercase;
+      color: #374151;
+      transition: color 0.2s;
+    }
+
+    .top-bar-nav a:hover {
+      color: #AF1E46;
+    }
+
+    /* ── Main content area ── */
+    .main-content {
+      position: relative;
+      z-index: 5;
+      display: flex;
+      flex-direction: column;
+      align-items: center;
+      justify-content: center;
+      min-height: calc(100vh - 46px);
+      padding: 16px 20px;
+    }
+
+    /* ── Hero text (matching cerasus.us layout) ── */
+    .hero-logo {
+      margin-bottom: 4px;
+    }
+
+    .hero-logo img {
+      height: 32px;
+      filter: brightness(0) invert(1);
+    }
+
+    .hero-tagline {
+      text-align: center;
+      font-size: 13px;
+      letter-spacing: 2px;
+      margin-bottom: 12px;
+      line-height: 1.8;
+      display: flex;
+      flex-direction: column;
+      align-items: center;
+    }
+
+    .hero-tagline .pink {
+      color: #FB98AF;
+      font-weight: 400;
+      display: block;
+    }
+
+    .hero-tagline .white {
+      color: rgba(255, 255, 255, 0.9);
+      font-weight: 400;
+      display: block;
+    }
+
+    /* ── Login card ── */
+    .login-card {
+      background: rgba(255, 255, 255, 0.1);
+      backdrop-filter: blur(24px);
+      -webkit-backdrop-filter: blur(24px);
+      border: 1px solid rgba(255, 255, 255, 0.15);
+      border-radius: 16px;
+      padding: 24px 32px;
+      width: 380px;
+      max-width: 92vw;
+    }
+
+    .login-card-title {
+      text-align: center;
+      font-size: 14px;
+      font-weight: 600;
+      color: rgba(255, 255, 255, 0.85);
+      letter-spacing: 3px;
+      text-transform: uppercase;
+      margin-bottom: 16px;
+    }
+
+    /* ── Form fields ── */
+    .field {
+      margin-bottom: 12px;
+    }
+
+    .field-label {
+      display: block;
+      font-size: 12px;
+      font-weight: 600;
+      color: rgba(255, 255, 255, 0.6);
+      letter-spacing: 0.5px;
+      text-transform: uppercase;
+      margin-bottom: 6px;
+    }
+
+    .field-input-wrap {
+      position: relative;
+    }
+
+    .field-icon {
+      position: absolute;
+      left: 14px;
+      top: 50%;
+      transform: translateY(-50%);
+      font-size: 15px;
+      color: rgba(255, 255, 255, 0.35);
+      pointer-events: none;
+    }
+
+    .field-input {
+      width: 100%;
+      padding: 10px 14px 10px 42px;
+      background: rgba(255, 255, 255, 0.08);
+      border: 1px solid rgba(255, 255, 255, 0.18);
+      border-radius: 8px;
+      color: #fff;
+      font-size: 14px;
+      outline: none;
+      transition: border-color 0.2s, box-shadow 0.2s;
+    }
+
+    .field-input::placeholder {
+      color: rgba(255, 255, 255, 0.3);
+    }
+
+    .field-input:focus {
+      border-color: #AF1E46;
+      box-shadow: 0 0 0 3px rgba(175, 30, 70, 0.2);
+    }
+
+    .field-toggle {
+      position: absolute;
+      right: 12px;
+      top: 50%;
+      transform: translateY(-50%);
+      background: none;
+      border: none;
+      color: rgba(255, 255, 255, 0.4);
+      cursor: pointer;
+      font-size: 16px;
+      padding: 4px;
+    }
+
+    /* ── Sign In button (matching cerasus.us "Learn More" pill) ── */
+    .btn-signin {
+      width: 100%;
+      padding: 12px;
+      background: #AF1E46;
+      color: #fff;
+      border: none;
+      border-radius: 300px;
+      font-size: 15px;
+      font-weight: 600;
+      letter-spacing: 1px;
+      cursor: pointer;
+      transition: background 0.2s, transform 0.1s;
+      margin-top: 6px;
+    }
+
+    .btn-signin:hover {
+      background: #8E1839;
+    }
+
+    .btn-signin:active {
+      transform: scale(0.98);
+    }
+
+    /* ── Error message ── */
+    .error-msg {
+      background: rgba(175, 30, 70, 0.2);
+      border: 1px solid rgba(175, 30, 70, 0.4);
+      color: #FB98AF;
+      padding: 10px 14px;
+      border-radius: 8px;
+      font-size: 13px;
+      text-align: center;
+      margin-bottom: 18px;
+    }
+
+    /* ── Field validation errors ── */
+    .field-error {
+      color: #FB98AF;
+      font-size: 12px;
+      margin-top: 4px;
+      min-height: 0;
+    }
+
+    .field-input.invalid {
+      border-color: #AF1E46;
+      box-shadow: 0 0 0 2px rgba(175, 30, 70, 0.25);
+    }
+
+    /* ── Footer ── */
+    .login-footer {
+      text-align: center;
+      margin-top: 16px;
+      font-size: 11px;
+      color: rgba(255, 255, 255, 0.25);
+      letter-spacing: 0.5px;
+    }
+
+    /* ── Responsive ── */
+    @media (max-width: 600px) {
+      .top-bar { padding: 12px 20px; }
+      .top-bar-nav { display: none; }
+      .hero-tagline { font-size: 14px; }
+      .hero-tagline .white { display: block; margin-top: 4px; }
+      .login-card { padding: 28px 24px; }
+    }
+  </style>
+</head>
+<body>
+  <div class="hero-bg"></div>
+
+  <!-- Top bar matching cerasus.us -->
+  <div class="top-bar">
+    <div class="top-bar-logo">
+      <img src="{{ url_for('static', filename='img/cerasus-logo-red.png') }}" alt="cerasus">
+    </div>
+    <nav class="top-bar-nav">
+      <a href="https://www.cerasus.us" target="_blank">home</a>
+      <a href="https://www.cerasus.us/about" target="_blank">about</a>
+      <a href="https://www.cerasus.us/operations" target="_blank">operations</a>
+      <a href="https://www.cerasus.us/contact" target="_blank">contact</a>
+    </nav>
+  </div>
+
+  <!-- Main hero + login -->
+  <div class="main-content">
+    <div class="hero-logo">
+      <img src="{{ url_for('static', filename='img/cerasus-logo-white.png') }}" alt="cerasus">
+    </div>
+
+    <div class="hero-tagline">
+      <span class="pink">unparalleled corporate security</span>
+      <span class="white">unmatched customer service</span>
+    </div>
+
+
+    <div class="login-card">
+      <div class="login-card-title">Management Hub</div>
+
+      {% with messages = get_flashed_messages(with_categories=true) %}
+      {% for category, msg in messages %}
+      <div class="error-msg" {% if category == 'warning' %}style="background:rgba(245,158,11,0.2);border-color:rgba(245,158,11,0.4);color:#FCD34D;"{% elif category == 'info' %}style="background:rgba(59,130,246,0.2);border-color:rgba(59,130,246,0.4);color:#93C5FD;"{% endif %}>{{ msg }}</div>
+      {% endfor %}
+      {% endwith %}
+
+      {% if error %}
+      <div class="error-msg">{{ error }}</div>
+      {% endif %}
+
+      <form method="POST" action="{{ url_for('auth.login') }}" id="loginForm" novalidate>
+        <div class="field">
+          <label class="field-label" for="username">Username</label>
+          <div class="field-input-wrap">
+            <span class="field-icon">&#9993;</span>
+            <input type="text" name="username" id="username" class="field-input"
+                   placeholder="Enter username"
+                   value="{{ request.form.get('username', '') }}" autofocus required>
+          </div>
+          <div class="field-error" id="username-error"></div>
+        </div>
+
+        <div class="field">
+          <label class="field-label" for="password">Password</label>
+          <div class="field-input-wrap">
+            <span class="field-icon">&#128274;</span>
+            <input type="password" name="password" id="password" class="field-input"
+                   placeholder="Enter password" required>
+            <button type="button" class="field-toggle" onclick="togglePw(this)" tabindex="-1" aria-label="Toggle password visibility">&#128065;</button>
+          </div>
+          <div class="field-error" id="password-error"></div>
+        </div>
+
+        <button type="submit" class="btn-signin">Sign In</button>
+      </form>
+
+      <div style="text-align:center; margin-top:14px; display:flex; justify-content:space-between; align-items:center;">
+        <a href="{{ url_for('auth.forgot_password') }}" style="color:rgba(255,255,255,0.5); font-size:12px; text-decoration:none; transition:color 0.2s;" onmouseover="this.style.color='#FB98AF'" onmouseout="this.style.color='rgba(255,255,255,0.5)'">Forgot password?</a>
+        <button type="button" onclick="demoLogin()" style="background:none; border:1px solid rgba(255,255,255,0.2); color:rgba(255,255,255,0.5); padding:4px 12px; border-radius:6px; font-size:12px; cursor:pointer; transition:all 0.2s;" onmouseover="this.style.borderColor='#FB98AF';this.style.color='#FB98AF'" onmouseout="this.style.borderColor='rgba(255,255,255,0.2)';this.style.color='rgba(255,255,255,0.5)'">Demo Login</button>
+      </div>
+
+      <div class="login-footer">
+        &copy; 2026 Cerasus Management Hub
+      </div>
+    </div>
+  </div>
+
+  <script>
+    function togglePw(btn) {
+      var input = btn.parentElement.querySelector('input');
+      if (input.type === 'password') { input.type = 'text'; btn.textContent = '\u{1F441}'; }
+      else { input.type = 'password'; btn.textContent = '\u{1F441}\u{200D}\u{1F5E8}'; }
+    }
+    function demoLogin() {
+      document.getElementById('username').value = 'admin';
+      document.getElementById('password').value = 'CerasusAdmin2026';
+      document.getElementById('loginForm').submit();
+    }
+
+    // Custom validation
+    document.getElementById('loginForm').addEventListener('submit', function(e) {
+      var u = document.getElementById('username');
+      var p = document.getElementById('password');
+      var ue = document.getElementById('username-error');
+      var pe = document.getElementById('password-error');
+      var valid = true;
+
+      ue.textContent = '';
+      pe.textContent = '';
+      u.classList.remove('invalid');
+      p.classList.remove('invalid');
+
+      if (!u.value.trim()) {
+        ue.textContent = 'Username is required.';
+        u.classList.add('invalid');
+        valid = false;
+      }
+      if (!p.value) {
+        pe.textContent = 'Password is required.';
+        p.classList.add('invalid');
+        valid = false;
+      }
+      if (!valid) e.preventDefault();
+    });
+
+    // Clear error on input
+    ['username', 'password'].forEach(function(id) {
+      document.getElementById(id).addEventListener('input', function() {
+        this.classList.remove('invalid');
+        document.getElementById(id + '-error').textContent = '';
+      });
+    });
+  </script>
+</body>
+</html>

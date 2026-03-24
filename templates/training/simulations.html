@@ -1,0 +1,40 @@
+{% extends "training/base_training.html" %}
+{% block title %}Simulations — Training Portal{% endblock %}
+
+{% block content %}
+<h1 class="trn-page-title">Simulations</h1>
+<p class="trn-page-subtitle">Interactive scenario-based training exercises</p>
+
+{% if simulations %}
+<div class="trn-courses-grid">
+  {% for sim in simulations %}
+  <div class="trn-card" style="padding:0; overflow:hidden;">
+    <div style="height:4px; background:var(--trn-accent);"></div>
+    <div style="padding:20px;">
+      <div style="display:flex; justify-content:space-between; align-items:flex-start; margin-bottom:8px;">
+        <h3 style="font-size:16px; font-weight:700; color:var(--trn-text);">{{ sim.title }}</h3>
+        {% if sim.status == 'Draft' %}
+        <span class="trn-badge" style="background:rgba(234,179,8,0.15); color:var(--trn-yellow);">Draft</span>
+        {% endif %}
+      </div>
+      <p style="font-size:13px; color:var(--trn-text-secondary); margin-bottom:12px; line-height:1.5;">
+        {{ sim.description or 'No description' }}
+      </p>
+      <div style="display:flex; justify-content:space-between; align-items:center; font-size:12px; color:var(--trn-text-muted);">
+        <span>{{ sim.category or 'General' }} &bull; {{ sim.scenarios|length }} scenario{{ 's' if sim.scenarios|length != 1 else '' }}{% if sim.duration %} &bull; {{ sim.duration }}{% endif %}</span>
+        {% if sim.status == 'Published' %}
+        <a href="{{ url_for('training.play_simulation', sim_id=sim.sim_id) }}" class="trn-btn trn-btn-primary trn-btn-sm">Launch</a>
+        {% endif %}
+      </div>
+    </div>
+  </div>
+  {% endfor %}
+</div>
+{% else %}
+<div class="trn-card" style="padding:48px; text-align:center;">
+  <div style="font-size:36px; margin-bottom:12px;">&#128187;</div>
+  <div style="font-size:16px; font-weight:600; color:var(--trn-text); margin-bottom:4px;">No simulations available</div>
+  <div style="font-size:13px; color:var(--trn-text-secondary);">Simulations will appear here once they are published.</div>
+</div>
+{% endif %}
+{% endblock %}

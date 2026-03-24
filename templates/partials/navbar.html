@@ -1,0 +1,85 @@
+<nav class="top-nav">
+  <a href="{{ url_for('hub.picker') }}" class="nav-brand">
+    <img src="{{ url_for('static', filename='img/cerasus-logo-red.png') }}" alt="cerasus" style="height:20px; margin-right:8px;">
+    <span class="nav-brand-text">Management Hub</span>
+  </a>
+
+  <button class="hamburger" onclick="toggleMobileNav()">&#9776;</button>
+
+  <div class="nav-links">
+    <a href="{{ url_for('hub.picker') }}" class="nav-link {{ 'active' if active_page == 'picker' else '' }}">
+      <span class="nav-icon">&#127968;</span> Hub
+    </a>
+
+    {% set module_icons = {
+      'operations': '&#128202;',
+      'uniforms': '&#128085;',
+      'attendance': '&#128197;',
+      'training': '&#127891;',
+      'da_generator': '&#128221;',
+      'discipline': '&#128221;'
+    } %}
+    {% set module_short = {'da_generator': 'DA Gen'} %}
+    {% for mod in modules_list %}
+    <a href="{{ url_for('modules.module_index', module_id=mod.module_id) }}"
+       class="nav-link {{ 'active' if active_module == mod.module_id else '' }}">
+      <span class="nav-icon">{{ module_icons.get(mod.module_id, '&#9881;')|safe }}</span> {{ module_short.get(mod.module_id, mod.name) }}
+    </a>
+    {% endfor %}
+
+    {% if current_user and current_user.role == 'admin' %}
+    <a href="{{ url_for('admin.users') }}" class="nav-link {{ 'active' if active_page and active_page.startswith('admin') else '' }}">
+      <span class="nav-icon">&#128272;</span> Admin
+    </a>
+    {% endif %}
+  </div>
+
+  <div class="nav-right">
+    <span id="nav-date" class="nav-date"></span>
+
+    <!-- Notification Bell -->
+    <div style="position:relative;">
+      <button class="nav-bell" onclick="toggleNotifications(event)" title="Notifications" aria-label="Notifications">
+        &#128276;
+        <div class="nav-bell-badge"></div>
+      </button>
+      <div class="notification-dropdown" id="notification-dropdown">
+        <div class="notification-dropdown-header">Notifications</div>
+        <div id="notifications-list"
+             hx-get="{{ url_for('api.online_users') }}" hx-trigger="load" hx-swap="innerHTML">
+          <div class="notification-item">
+            <div class="notification-item-desc">Loading...</div>
+          </div>
+        </div>
+        <div class="notification-footer">
+          <a href="{{ url_for('hub.activity') }}">View all notifications &#8594;</a>
+        </div>
+      </div>
+    </div>
+
+    <!-- Dark mode -->
+    <button class="nav-bell" onclick="toggleDarkMode()" title="Toggle dark mode" aria-label="Toggle dark mode" style="font-size:16px;">
+      {% if dark_mode %}&#9788;{% else %}&#9790;{% endif %}
+    </button>
+
+    <!-- User Menu -->
+    <div class="user-menu-trigger" onclick="toggleUserMenu(event)" role="button" tabindex="0" aria-label="User menu" aria-haspopup="true" onkeydown="if(event.key==='Enter'||event.key===' '){event.preventDefault();toggleUserMenu(event)}">
+      <div class="user-avatar">
+        {% if current_user %}{{ current_user.display_name[:2]|upper }}{% endif %}
+      </div>
+      <span class="user-menu-name">{{ current_user.display_name if current_user else '' }}</span>
+      <span style="font-size:10px; color:var(--text-light);">&#9660;</span>
+
+      <div class="user-dropdown" id="user-dropdown">
+        <div style="padding:12px 14px; border-bottom:1px solid var(--border); margin-bottom:4px;">
+          <div style="font-weight:700; font-size:14px;">{{ current_user.display_name if current_user else '' }}</div>
+          <div style="font-size:12px; color:var(--text-light);">{{ current_user.role|upper if current_user else '' }}</div>
+        </div>
+        <a href="{{ url_for('auth.change_password') }}">Change Password</a>
+        <form method="post" action="{{ url_for('auth.logout') }}" style="margin:0;">
+          <button type="submit" style="background:none;border:none;padding:8px 16px;width:100%;text-align:left;cursor:pointer;font-size:inherit;font-family:inherit;" class="text-danger">Sign Out</button>
+        </form>
+      </div>
+    </div>
+  </div>
+</nav>

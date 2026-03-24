@@ -1,0 +1,185 @@
+{% extends "base.html" %}
+{% block title %}New DA — DA Generator — Cerasus Hub{% endblock %}
+
+{% block tabs %}
+<div class="module-tabs">
+  {% for section_title, section_items in sidebar_sections %}
+    {% for label, endpoint in section_items %}
+    <a href="{{ url_for(endpoint) }}" class="module-tab {{ 'active' if active_tab == label else '' }}">{{ label }}</a>
+    {% endfor %}
+  {% endfor %}
+</div>
+{% endblock %}
+
+{% block content %}
+<div class="page-header">
+  <div>
+    <h1 class="page-title">&#128196; New Disciplinary Action</h1>
+    <p class="page-subtitle">Create a new DA record for an employee violation</p>
+  </div>
+</div>
+
+{% if da %}
+<div style="background:var(--blue-light); border:1px solid var(--blue); border-radius:8px; padding:14px 20px; margin-bottom:16px; max-width:900px; display:flex; align-items:center; gap:12px;">
+  <span style="font-size:20px;">&#128196;</span>
+  <div>
+    <div style="font-weight:700; color:#1D4ED8;">Attendance DA Draft — {{ da.discipline_level }}</div>
+    <div style="font-size:13px; color:#3B82F6;">
+      Auto-populated from attendance infractions for {{ da.employee_name }}.
+      Review the details below, edit as needed, then submit.
+    </div>
+  </div>
+</div>
+{% endif %}
+
+<div class="card" style="padding:24px; max-width:900px;">
+  <form method="post" action="{{ url_for('da_generator.new_da') }}">
+
+    <!-- Employee Information -->
+    <div class="section-label" style="margin-bottom:12px; margin-top:0;">Employee Information</div>
+    <div style="display:grid; grid-template-columns:1fr 1fr; gap:16px; margin-bottom:24px;">
+      <div>
+        <label class="form-label">Employee / Officer *</label>
+        <select name="employee_officer_id" class="form-input" id="officer-select" onchange="updateOfficerFields()">
+          <option value="">Select officer...</option>
+          {% for o in officers %}
+          <option value="{{ o.officer_id }}"
+                  data-name="{{ o.name }}"
+                  data-title="{{ o.job_title or '' }}"
+                  data-site="{{ o.site or '' }}">
+            {{ o.name }} — {{ o.site or 'No site' }}
+          </option>
+          {% endfor %}
+        </select>
+      </div>
+      <div>
+        <label class="form-label">Employee Name *</label>
+        <input type="text" name="employee_name" id="employee-name" class="form-input" required placeholder="Auto-filled from selection" value="{{ da.employee_name if da else '' }}">
+      </div>
+      <div>
+        <label class="form-label">Position</label>
+        <input type="text" name="employee_position" id="employee-position" class="form-input" placeholder="Auto-filled from selection" value="{{ da.employee_position if da else '' }}">
+      </div>
+      <div>
+        <label class="form-label">Site</label>
+        <select name="site" id="employee-site" class="form-input">
+          <option value="">Select site...</option>
+          {% for s in sites %}
+          <option value="{{ s }}" {{ 'selected' if da and da.site == s else '' }}>{{ s }}</option>
+          {% endfor %}
+        </select>
+      </div>
+      <div>
+        <label class="form-label">Security Director</label>
+        <input type="text" name="security_director" class="form-input"
+               value="{{ da.security_director if da and da.security_director else (current_user.display_name if current_user else '') }}">
+      </div>
+    </div>
+
+    <!-- Incident Details -->
+    <div class="section-label" style="margin-bottom:12px;">Incident Details</div>
+    <div style="display:grid; grid-template-columns:1fr 1fr; gap:16px; margin-bottom:16px;">
+      <div>
+        <label class="form-label">Violation Type *</label>
+        <select name="violation_type" class="form-input" required>
+          <option value="">Select type...</option>
+          {% for vt in violation_types %}
+          <option {{ 'selected' if da and da.violation_type == vt else '' }}>{{ vt }}</option>
+          {% endfor %}
+        </select>
+      </div>
+      <div>
+        <label class="form-label">Incident Date(s) *</label>
+        <input type="text" name="incident_dates" class="form-input" required
+               placeholder="e.g. 2026-03-15, 2026-03-18"
+               value="{{ da.incident_dates if da else '' }}">
+      </div>
+      <div>
+        <label class="form-label">Discipline Level *</label>
+        <select name="discipline_level" class="form-input" required>
+          <option value="">Select level...</option>
+          {% for dl in discipline_levels %}
+          <option {{ 'selected' if da and da.discipline_level == dl else '' }}>{{ dl }}</option>
+          {% endfor %}
+        </select>
+      </div>
+    </div>
+
+    <div style="margin-bottom:24px;">
+      <label class="form-label">Incident Narrative *</label>
+      <textarea name="incident_narrative" class="form-input" rows="6" required
+                placeholder="Describe the incident in detail. Include specific dates, times, locations, and what occurred...">{{ da.incident_narrative if da else '' }}</textarea>
+    </div>
+
+    <!-- Prior Discipline -->
+    <div class="section-label" style="margin-bottom:12px;">Prior Discipline (Same Violation Type)</div>
+    <div style="display:grid; grid-template-columns:1fr 1fr 1fr; gap:16px; margin-bottom:24px;">
+      <div>
+        <label class="form-label">Prior Verbal Warnings</label>
+        <input type="number" name="prior_verbal_same" class="form-input" value="{{ da.prior_verbal_same if da else 0 }}" min="0" max="10">
+      </div>
+      <div>
+        <label class="form-label">Prior Written Warnings</label>
+        <input type="number" name="prior_written_same" class="form-input" value="{{ da.prior_written_same if da else 0 }}" min="0" max="10">
+      </div>
+      <div>
+        <label class="form-label">Prior Final Warnings</label>
+        <input type="number" name="prior_final_same" class="form-input" value="{{ da.prior_final_same if da else 0 }}" min="0" max="10">
+      </div>
+    </div>
+
+    <!-- Coaching -->
+    <div class="section-label" style="margin-bottom:12px;">Prior Coaching</div>
+    <div style="margin-bottom:16px;">
+      <label style="display:flex; align-items:center; gap:8px; cursor:pointer;">
+        <input type="checkbox" name="coaching_occurred" value="1" id="coaching-check"
+               onchange="document.getElementById('coaching-fields').style.display = this.checked ? 'grid' : 'none'">
+        <span class="form-label" style="margin:0;">Coaching was provided prior to this DA</span>
+      </label>
+    </div>
+    <div id="coaching-fields" style="display:none; grid-template-columns:1fr 1fr; gap:16px; margin-bottom:24px;">
+      <div>
+        <label class="form-label">Coaching Date</label>
+        <input type="date" name="coaching_date" class="form-input">
+      </div>
+      <div style="grid-column:1/-1;">
+        <label class="form-label">Coaching Content</label>
+        <textarea name="coaching_content" class="form-input" rows="3"
+                  placeholder="What was discussed during coaching..."></textarea>
+      </div>
+    </div>
+
+    <!-- Additional Comments -->
+    <div style="margin-bottom:24px;">
+      <label class="form-label">Additional Comments</label>
+      <textarea name="additional_comments" class="form-input" rows="3"
+                placeholder="Any additional notes or context...">{{ da.additional_comments if da else '' }}</textarea>
+    </div>
+
+    <div style="display:flex; gap:12px;">
+      <button type="submit" class="btn btn-blue">Create DA (Draft)</button>
+      {% if da %}
+      <a href="{{ url_for('da_generator.download_pdf', da_id=da.da_id) }}" class="btn btn-secondary">&#128196; Download PDF</a>
+      {% endif %}
+      <a href="{{ url_for('da_generator.da_history') }}" class="btn btn-secondary">Cancel</a>
+    </div>
+  </form>
+</div>
+
+<script>
+function updateOfficerFields() {
+  var sel = document.getElementById('officer-select');
+  var opt = sel.options[sel.selectedIndex];
+  document.getElementById('employee-name').value = opt.dataset.name || '';
+  document.getElementById('employee-position').value = opt.dataset.title || '';
+  var siteSelect = document.getElementById('employee-site');
+  var siteName = opt.dataset.site || '';
+  for (var i = 0; i < siteSelect.options.length; i++) {
+    if (siteSelect.options[i].text === siteName) {
+      siteSelect.selectedIndex = i;
+      break;
+    }
+  }
+}
+</script>
+{% endblock %}

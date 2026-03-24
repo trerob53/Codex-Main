@@ -1,0 +1,118 @@
+{% extends "base.html" %}
+{% block title %}Compliance — Uniforms — Cerasus Hub{% endblock %}
+
+{% block tabs %}
+<div class="module-tabs">
+  {% for section_title, section_items in sidebar_sections %}
+    {% for label, endpoint in section_items %}
+    <a href="{{ url_for(endpoint) }}" class="module-tab {{ 'active' if active_tab == label else '' }}">{{ label }}</a>
+    {% endfor %}
+  {% endfor %}
+</div>
+{% endblock %}
+
+{% block content %}
+<div class="page-header">
+  <div>
+    <h1 class="page-title">Compliance Report</h1>
+    <p class="page-subtitle">Officer uniform compliance against job title requirements</p>
+  </div>
+  <div>
+    <form method="get" style="display:flex; gap:8px; align-items:center;">
+      <select name="site" class="filter-select" onchange="this.form.submit()">
+        <option value="">All Sites</option>
+        {% for s in sites %}
+        <option {{ 'selected' if site_filter == s else '' }}>{{ s }}</option>
+        {% endfor %}
+      </select>
+    </form>
+  </div>
+</div>
+
+<!-- Summary Cards -->
+<div class="stat-cards">
+  <div class="stat-card">
+    <div class="stat-card-label">Total Officers</div>
+    <div class="stat-card-value">{{ summary.total }}</div>
+  </div>
+  <div class="stat-card">
+    <div class="stat-card-label">Fully Compliant</div>
+    <div class="stat-card-value" style="color:#059669;">{{ summary.compliant }}</div>
+  </div>
+  <div class="stat-card">
+    <div class="stat-card-label">Partially Compliant</div>
+    <div class="stat-card-value" style="color:#D97706;">{{ summary.partial }}</div>
+  </div>
+  <div class="stat-card">
+    <div class="stat-card-label">Non-Compliant</div>
+    <div class="stat-card-value" style="color:#DC2626;">{{ summary.non_compliant }}</div>
+  </div>
+</div>
+
+<div class="card" style="padding:20px;">
+  <div class="filter-bar" style="margin-bottom:16px;">
+    <div class="filter-search">
+      <span class="filter-search-icon">&#128269;</span>
+      <input type="text" placeholder="Search officers..." oninput="filterTable(this.value, 'compliance-table')">
+    </div>
+    <select class="filter-select" id="comp-filter" onchange="applyFilters()">
+      <option value="">All Levels</option>
+      <option value="full">Fully Compliant</option>
+      <option value="partial">Partially Compliant</option>
+      <option value="non">Non-Compliant</option>
+    </select>
+  </div>
+
+  <div style="overflow-x:auto;">
+    <table class="data-table" id="compliance-table">
+      <thead>
+        <tr><th>Officer</th><th>Job Title</th><th>Site</th><th>Compliance</th><th>Missing Items</th></tr>
+      </thead>
+      <tbody>
+        {% for r in report %}
+        {% set level = 'full' if r.compliance_pct >= 100 else 'non' if r.compliance_pct == 0 and r.missing_items else 'partial' %}
+        <tr data-level="{{ level }}">
+          <td style="font-weight:600;">{{ r.officer_name|officer_link }}</td>
+          <td>{{ r.job_title or '—' }}</td>
+          <td>{{ r.site or '—' }}</td>
+          <td>
+            <div style="display:flex; align-items:center; gap:8px;">
+              <div style="width:80px; height:8px; background:var(--border); border-radius:4px; overflow:hidden;">
+                <div style="width:{{ r.compliance_pct }}%; height:100%; background:{{ '#059669' if r.compliance_pct >= 100 else '#D97706' if r.compliance_pct >= 50 else '#DC2626' }}; border-radius:4px;"></div>
+              </div>
+              <span class="badge badge-{{ 'success' if r.compliance_pct >= 100 else 'warning' if r.compliance_pct >= 50 else 'danger' }}">{{ r.compliance_pct }}%</span>
+            </div>
+          </td>
+          <td style="font-size:13px;">
+            {% if r.missing_items %}
+            {% for item in r.missing_items %}
+            <span class="badge badge-danger" style="margin:2px;">{{ item }}</span>
+            {% endfor %}
+            {% else %}
+            <span style="color:#059669;">All items issued</span>
+            {% endif %}
+          </td>
+        </tr>
+        {% else %}
+        <tr><td colspan="5" style="text-align:center; color:var(--text-light); padding:32px;">No compliance data. Configure requirements in Settings.</td></tr>
+        {% endfor %}
+      </tbody>
+    </table>
+  </div>
+</div>
+
+<script>
+function filterTable(query) { applyFilters(query); }
+function applyFilters(query) {
+  if (query === undefined) query = document.querySelector('.filter-search input').value;
+  var rows = document.getElementById('compliance-table').querySelectorAll('tbody tr');
+  var compFilter = document.getElementById('comp-filter').value;
+  query = (query || '').toLowerCase();
+  rows.forEach(function(row) {
+    var textMatch = !query || row.textContent.toLowerCase().includes(query);
+    var levelMatch = !compFilter || row.dataset.level === compFilter;
+    row.style.display = textMatch && levelMatch ? '' : 'none';
+  });
+}
+</script>
+{% endblock %}

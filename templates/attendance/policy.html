@@ -1,0 +1,104 @@
+{% extends "base.html" %}
+{% block title %}Policy Settings — Attendance — Cerasus Hub{% endblock %}
+
+{% block tabs %}
+<div class="module-tabs">
+  <a href="{{ url_for('attendance.dashboard') }}" class="module-tab {{ 'active' if active_tab == 'dashboard' }}">Dashboard</a>
+  <a href="{{ url_for('attendance.roster') }}" class="module-tab {{ 'active' if active_tab == 'roster' }}">Roster</a>
+  <a href="{{ url_for('attendance.sites') }}" class="module-tab {{ 'active' if active_tab == 'sites' }}">Sites</a>
+  <a href="{{ url_for('attendance.log_infraction') }}" class="module-tab {{ 'active' if active_tab == 'log' }}">Log Infraction</a>
+  <a href="{{ url_for('attendance.discipline') }}" class="module-tab {{ 'active' if active_tab == 'discipline' }}">Discipline</a>
+  <a href="{{ url_for('attendance.reviews') }}" class="module-tab {{ 'active' if active_tab == 'reviews' }}">Reviews</a>
+  <a href="{{ url_for('attendance.reports') }}" class="module-tab {{ 'active' if active_tab == 'reports' }}">Reports</a>
+  <a href="{{ url_for('attendance.analytics') }}" class="module-tab {{ 'active' if active_tab == 'analytics' }}">Analytics</a>
+</div>
+{% endblock %}
+
+{% block content %}
+<div class="page-header">
+  <div>
+    <h1 class="page-title">Policy Settings</h1>
+    <p class="page-subtitle">Configure discipline thresholds and point policies</p>
+  </div>
+</div>
+
+<div style="display:grid; grid-template-columns:1fr 1fr; gap:24px; margin-top:16px;">
+
+  <!-- Threshold Settings -->
+  <div class="card" style="padding:24px;">
+    <div class="section-title">Discipline Thresholds</div>
+    <form method="POST" action="{{ url_for('attendance.policy_settings') }}">
+      <div style="margin-bottom:14px;">
+        <label class="form-label">Verbal Warning (points)</label>
+        <input type="number" name="verbal_warning_pts" class="form-input" step="0.5" min="0" value="{{ settings.verbal_warning_pts }}">
+      </div>
+      <div style="margin-bottom:14px;">
+        <label class="form-label">Written Warning (points)</label>
+        <input type="number" name="written_warning_pts" class="form-input" step="0.5" min="0" value="{{ settings.written_warning_pts }}">
+      </div>
+      <div style="margin-bottom:14px;">
+        <label class="form-label">Employment Review (points)</label>
+        <input type="number" name="employment_review_pts" class="form-input" step="0.5" min="0" value="{{ settings.employment_review_pts }}">
+      </div>
+      <div style="margin-bottom:14px;">
+        <label class="form-label">Termination Eligible (points)</label>
+        <input type="number" name="termination_pts" class="form-input" step="0.5" min="0" value="{{ settings.termination_pts }}">
+      </div>
+
+      <hr style="margin:20px 0; border:none; border-top:1px solid #E5E7EB;">
+
+      <div style="margin-bottom:14px;">
+        <label class="form-label">Point Window (days)</label>
+        <input type="number" name="point_window_days" class="form-input" min="1" value="{{ settings.point_window_days }}">
+        <div style="font-size:12px; color:var(--text-light); margin-top:4px;">Points expire after this many days</div>
+      </div>
+      <div style="margin-bottom:14px;">
+        <label class="form-label">Clean Slate Period (days)</label>
+        <input type="number" name="clean_slate_days" class="form-input" min="1" value="{{ settings.clean_slate_days }}">
+        <div style="font-size:12px; color:var(--text-light); margin-top:4px;">No infractions for this period resets discipline</div>
+      </div>
+      <div style="margin-bottom:20px;">
+        <label class="form-label">Max Emergency Exemptions</label>
+        <input type="number" name="emergency_max" class="form-input" min="0" value="{{ settings.emergency_max }}">
+        <div style="font-size:12px; color:var(--text-light); margin-top:4px;">Max approved exemptions per 90-day window</div>
+      </div>
+
+      <button type="submit" class="btn btn-blue">Save Settings</button>
+    </form>
+  </div>
+
+  <!-- Infraction Types Reference -->
+  <div class="card" style="padding:24px;">
+    <div class="section-title">Infraction Types Reference</div>
+    <table class="data-table">
+      <thead>
+        <tr>
+          <th>Type</th>
+          <th>Points</th>
+          <th>Category</th>
+          <th>Auto Discipline</th>
+        </tr>
+      </thead>
+      <tbody>
+        {% for key, info in infraction_types.items() %}
+        <tr>
+          <td style="font-size:13px;">{{ info.label }}</td>
+          <td style="font-weight:600;">{{ info.points }}</td>
+          <td>
+            <span class="badge badge-info">{{ info.category }}</span>
+          </td>
+          <td style="font-size:12px; color:var(--text-light);">
+            {% if info.auto_discipline %}
+              {{ discipline_labels.get(info.auto_discipline, info.auto_discipline) }}
+            {% else %}
+              —
+            {% endif %}
+          </td>
+        </tr>
+        {% endfor %}
+      </tbody>
+    </table>
+  </div>
+
+</div>
+{% endblock %}

@@ -1,0 +1,72 @@
+{% extends "base.html" %}
+{% block title %}Audit Log — Uniforms — Cerasus Hub{% endblock %}
+
+{% block tabs %}
+<div class="module-tabs">
+  {% for section_title, section_items in sidebar_sections %}
+    {% for label, endpoint in section_items %}
+    <a href="{{ url_for(endpoint) }}" class="module-tab {{ 'active' if active_tab == label else '' }}">{{ label }}</a>
+    {% endfor %}
+  {% endfor %}
+</div>
+{% endblock %}
+
+{% block content %}
+<div class="page-header">
+  <div>
+    <h1 class="page-title">Audit Log</h1>
+    <p class="page-subtitle">Uniforms module activity and change history</p>
+  </div>
+</div>
+
+<div class="card" style="padding:20px;">
+  <div class="filter-bar" style="margin-bottom:16px;">
+    <div class="filter-search">
+      <span class="filter-search-icon">&#128269;</span>
+      <input type="text" placeholder="Search audit entries..." oninput="filterTable(this.value, 'audit-table')">
+    </div>
+  </div>
+
+  <div style="overflow-x:auto;">
+    <table class="data-table" id="audit-table">
+      <thead>
+        <tr>
+          <th>Timestamp</th>
+          <th>User</th>
+          <th>Event</th>
+          <th>Details</th>
+        </tr>
+      </thead>
+      <tbody>
+        {% for entry in entries %}
+        <tr>
+          <td style="font-size:13px; white-space:nowrap;">{{ entry.timestamp[:19] if entry.timestamp else '—' }}</td>
+          <td style="font-weight:600;">{{ entry.username or entry.user or '—' }}</td>
+          <td>
+            <span class="badge badge-info">{{ entry.event_type or entry.action or '—' }}</span>
+          </td>
+          <td style="font-size:13px; max-width:400px; overflow:hidden; text-overflow:ellipsis;">
+            {{ entry.details or entry.description or '—' }}
+          </td>
+        </tr>
+        {% else %}
+        <tr><td colspan="4" style="text-align:center; color:var(--text-light); padding:32px;">No audit entries found</td></tr>
+        {% endfor %}
+      </tbody>
+    </table>
+  </div>
+  <div style="margin-top:12px; font-size:13px; color:var(--text-light);">
+    Showing {{ entries|length }} entr{{ 'ies' if entries|length != 1 else 'y' }}
+  </div>
+</div>
+
+<script>
+function filterTable(query, tableId) {
+  var rows = document.getElementById(tableId).querySelectorAll('tbody tr');
+  query = query.toLowerCase();
+  rows.forEach(function(row) {
+    row.style.display = row.textContent.toLowerCase().includes(query) ? '' : 'none';
+  });
+}
+</script>
+{% endblock %}

@@ -1,0 +1,65 @@
+{% extends "operations/_layout.html" %}
+{% block page_title %}Coverage Map{% endblock %}
+{% block breadcrumb_tail %}
+<span class="sep">&#8250;</span><span class="current">Coverage Map</span>
+{% endblock %}
+
+{% block page_content %}
+<div class="page-header">
+  <div>
+    <h1 class="page-title">Coverage Map</h1>
+    <p class="page-subtitle">Site-by-day assignment grid for the week of {{ week_start.strftime('%b %d') }} &ndash; {{ week_end.strftime('%b %d, %Y') }}</p>
+  </div>
+  <div style="display:flex;gap:8px;">
+    <a href="{{ url_for('operations.coverage_map', week_start=prev_week) }}" class="btn btn-secondary btn-sm">&larr; Prev</a>
+    <a href="{{ url_for('operations.coverage_map') }}" class="btn btn-secondary btn-sm">This Week</a>
+    <a href="{{ url_for('operations.coverage_map', week_start=next_week) }}" class="btn btn-secondary btn-sm">Next &rarr;</a>
+  </div>
+</div>
+
+<div style="overflow-x:auto;">
+<table class="data-table" style="min-width:900px;">
+  <thead>
+    <tr>
+      <th style="min-width:160px;position:sticky;left:0;background:var(--info-light);z-index:2;">Site</th>
+      {% for d in days %}
+      <th style="text-align:center;min-width:110px;">
+        {{ d.strftime('%a') }}<br>
+        <small>{{ d.strftime('%m/%d') }}</small>
+      </th>
+      {% endfor %}
+    </tr>
+  </thead>
+  <tbody>
+    {% for site in sites %}
+    {% set sn = site.name %}
+    <tr>
+      <td style="position:sticky;left:0;background:var(--card);z-index:1;"><strong>{{ sn }}</strong></td>
+      {% for d in days %}
+      {% set ds = d.isoformat() %}
+      {% set cell = grid.get(sn, {}).get(ds, []) %}
+      <td style="text-align:center;vertical-align:top;padding:6px;">
+        {% if cell %}
+        {% for a in cell %}
+        <div style="background:var(--blue-light);border-radius:6px;padding:4px 6px;margin-bottom:4px;font-size:12px;border-left:3px solid {% if a.status == 'Draft' %}#D97706{% elif a.assignment_type == 'Coverage' %}#059669{% else %}#2563EB{% endif %};">
+          <div style="font-weight:600;color:var(--text);">{{ a.officer_name|officer_link }}</div>
+          <div style="color:var(--text-light);">{{ a.start_time or '?' }}-{{ a.end_time or '?' }}</div>
+          {% if a.assignment_type != 'Billable' %}
+          <span class="badge badge-info" style="font-size:10px;">{{ a.assignment_type }}</span>
+          {% endif %}
+        </div>
+        {% endfor %}
+        {% else %}
+        <span style="color:var(--text-light);font-size:12px;">&mdash;</span>
+        {% endif %}
+      </td>
+      {% endfor %}
+    </tr>
+    {% endfor %}
+    {% if not sites %}
+    <tr><td colspan="{{ days|length + 1 }}" style="text-align:center;color:var(--text-light);padding:32px;">No sites configured.</td></tr>
+    {% endif %}
+  </tbody>
+</table>
+</div>
+{% endblock %}

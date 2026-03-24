@@ -1,0 +1,63 @@
+{% extends "base.html" %}
+{% block title %}Audit Trail — Attendance — Cerasus Hub{% endblock %}
+
+{% block tabs %}
+<div class="module-tabs">
+  <a href="{{ url_for('attendance.dashboard') }}" class="module-tab {{ 'active' if active_tab == 'dashboard' }}">Dashboard</a>
+  <a href="{{ url_for('attendance.roster') }}" class="module-tab {{ 'active' if active_tab == 'roster' }}">Roster</a>
+  <a href="{{ url_for('attendance.sites') }}" class="module-tab {{ 'active' if active_tab == 'sites' }}">Sites</a>
+  <a href="{{ url_for('attendance.log_infraction') }}" class="module-tab {{ 'active' if active_tab == 'log' }}">Log Infraction</a>
+  <a href="{{ url_for('attendance.discipline') }}" class="module-tab {{ 'active' if active_tab == 'discipline' }}">Discipline</a>
+  <a href="{{ url_for('attendance.reviews') }}" class="module-tab {{ 'active' if active_tab == 'reviews' }}">Reviews</a>
+  <a href="{{ url_for('attendance.reports') }}" class="module-tab {{ 'active' if active_tab == 'reports' }}">Reports</a>
+  <a href="{{ url_for('attendance.analytics') }}" class="module-tab {{ 'active' if active_tab == 'analytics' }}">Analytics</a>
+</div>
+{% endblock %}
+
+{% block content %}
+<div class="page-header">
+  <div>
+    <h1 class="page-title">Audit Trail</h1>
+    <p class="page-subtitle">Activity log for the Attendance module</p>
+  </div>
+</div>
+
+<div class="card" style="margin-top:16px;">
+  <table class="data-table">
+    <thead>
+      <tr>
+        <th>Timestamp</th>
+        <th>User</th>
+        <th>Event</th>
+        <th>Action</th>
+        <th>Table</th>
+        <th>Record</th>
+        <th>Details</th>
+      </tr>
+    </thead>
+    <tbody>
+      {% for entry in entries %}
+      <tr>
+        <td style="white-space:nowrap; font-size:12px;">{{ entry.timestamp[:19]|replace("T", " ") if entry.timestamp else '—' }}</td>
+        <td style="font-weight:600;">{{ entry.username }}</td>
+        <td>
+          <span class="badge badge-info">{{ entry.event_type }}</span>
+        </td>
+        <td>{{ entry.action or '—' }}</td>
+        <td style="font-size:12px; color:var(--text-light);">{{ entry.table_name or '—' }}</td>
+        <td style="font-size:12px;">{{ entry.record_id or '—' }}</td>
+        <td style="font-size:12px; max-width:300px; overflow:hidden; text-overflow:ellipsis;">{{ entry.details or '—' }}</td>
+      </tr>
+      {% else %}
+      <tr>
+        <td colspan="7" style="text-align:center; color:var(--text-light); padding:24px;">No audit entries found.</td>
+      </tr>
+      {% endfor %}
+    </tbody>
+  </table>
+</div>
+
+<div style="margin-top:12px; font-size:13px; color:var(--text-light);">
+  Showing {{ entries|length }} audit entr{{ 'y' if entries|length == 1 else 'ies' }}
+</div>
+{% endblock %}

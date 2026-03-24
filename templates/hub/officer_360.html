@@ -1,0 +1,424 @@
+{% extends "base.html" %}
+{% block title %}{{ officer.name }} — Officer 360 — Cerasus Hub{% endblock %}
+
+{% block breadcrumb %}
+<div class="breadcrumb-bar">
+  <a href="{{ url_for('hub.picker') }}">Hub</a>
+  <span class="sep">&#8250;</span>
+  <a href="{{ url_for('hub.people') }}">People</a>
+  <span class="sep">&#8250;</span>
+  <span class="current">{{ officer.name }}</span>
+</div>
+{% endblock %}
+
+{% block content %}
+<style>
+  .o360-header { display:flex; align-items:center; gap:20px; margin-bottom:24px; flex-wrap:wrap; }
+  .o360-avatar { width:64px; height:64px; border-radius:50%; background:var(--blue); color:#fff; display:flex; align-items:center; justify-content:center; font-size:22px; font-weight:700; flex-shrink:0; }
+  .o360-name { font-size:24px; font-weight:700; margin:0; }
+  .o360-meta { display:flex; gap:12px; align-items:center; margin-top:4px; flex-wrap:wrap; font-size:13px; color:var(--text-light); }
+  .o360-meta span { display:flex; align-items:center; gap:4px; }
+  .o360-actions { margin-left:auto; display:flex; gap:8px; flex-wrap:wrap; }
+
+  .o360-kpis { display:grid; grid-template-columns:repeat(5, 1fr); gap:12px; margin-bottom:24px; }
+  .o360-kpi { background:var(--card-bg); border:1px solid var(--border); border-radius:10px; padding:16px; text-align:center; }
+  .o360-kpi-value { font-size:28px; font-weight:800; margin:4px 0; }
+  .o360-kpi-label { font-size:12px; color:var(--text-light); text-transform:uppercase; letter-spacing:0.5px; }
+  .o360-kpi-bar { height:4px; border-radius:2px; margin-top:8px; background:var(--border); }
+  .o360-kpi-bar-fill { height:100%; border-radius:2px; transition:width 0.5s; }
+
+  .o360-tabs { display:flex; gap:4px; margin-bottom:20px; flex-wrap:wrap; border-bottom:1px solid var(--border); padding-bottom:0; }
+  .o360-tab { padding:10px 18px; font-size:14px; font-weight:500; cursor:pointer; border:none; background:none; color:var(--text-light); border-bottom:2px solid transparent; transition:all 0.2s; }
+  .o360-tab:hover { color:var(--text); }
+  .o360-tab.active { color:var(--blue); border-bottom-color:var(--blue); font-weight:600; }
+  .o360-panel { display:none; }
+  .o360-panel.active { display:block; }
+
+  .o360-info-grid { display:grid; grid-template-columns:repeat(auto-fill, minmax(200px, 1fr)); gap:16px; }
+  .o360-info-item label { display:block; font-size:11px; color:var(--text-light); text-transform:uppercase; letter-spacing:0.5px; margin-bottom:2px; }
+  .o360-info-item div { font-size:14px; font-weight:500; }
+
+  .o360-timeline { margin-top:16px; }
+  .o360-tl-item { display:flex; gap:12px; padding:10px 0; border-bottom:1px solid var(--border); align-items:flex-start; }
+  .o360-tl-date { font-size:12px; color:var(--text-light); min-width:85px; flex-shrink:0; }
+  .o360-tl-dot { width:8px; height:8px; border-radius:50%; margin-top:5px; flex-shrink:0; }
+  .o360-tl-content { font-size:13px; }
+  .o360-tl-type { font-size:11px; color:var(--text-light); }
+
+  .risk-gauge { position:relative; width:60px; height:60px; margin:0 auto 4px; }
+  .risk-gauge svg { transform:rotate(-90deg); }
+  .risk-gauge-text { position:absolute; inset:0; display:flex; align-items:center; justify-content:center; font-size:16px; font-weight:800; }
+
+  @media (max-width: 768px) {
+    .o360-kpis { grid-template-columns:repeat(2, 1fr); }
+    .o360-header { flex-direction:column; align-items:flex-start; }
+    .o360-actions { margin-left:0; }
+  }
+</style>
+
+<!-- Header -->
+<div class="o360-header">
+  <div class="o360-avatar">{{ officer.name[:2]|upper }}</div>
+  <div>
+    <h1 class="o360-name">{{ officer.name }}</h1>
+    <div class="o360-meta">
+      <span class="badge badge-{{ 'success' if officer.status == 'Active' else 'danger' }}">{{ officer.status or 'Active' }}</span>
+      <span>&#128188; {{ officer.job_title or 'Security Officer' }}</span>
+      <span>&#127970; {{ officer.site or 'Unassigned' }}</span>
+      {% if officer.employee_id %}<span>ID: {{ officer.employee_id }}</span>{% endif %}
+      {% if officer.hire_date %}<span>&#128197; Hired {{ officer.hire_date }}</span>{% endif %}
+    </div>
+  </div>
+  <div class="o360-actions">
+    <a href="{{ url_for('attendance.log_infraction') }}?officer_id={{ officer.officer_id }}" class="btn btn-secondary btn-sm">&#9888; Log Infraction</a>
+    <a href="{{ url_for('da_generator.new_da') }}?officer_id={{ officer.officer_id }}" class="btn btn-secondary btn-sm">&#128221; Create DA</a>
+  </div>
+</div>
+
+<!-- KPI Cards -->
+<div class="o360-kpis">
+  <!-- Risk Score -->
+  <div class="o360-kpi">
+    <div class="o360-kpi-label">Risk Score</div>
+    {% set risk_color = '#059669' if risk_score < 30 else ('#D97706' if risk_score < 60 else '#C8102E') %}
+    <div class="risk-gauge">
+      <svg width="60" height="60" viewBox="0 0 60 60">
+        <circle cx="30" cy="30" r="26" fill="none" stroke="var(--border)" stroke-width="5"/>
+        <circle cx="30" cy="30" r="26" fill="none" stroke="{{ risk_color }}" stroke-width="5"
+                stroke-dasharray="{{ (risk_score / 100) * 163.36 }} 163.36" stroke-linecap="round"/>
+      </svg>
+      <div class="risk-gauge-text" style="color:{{ risk_color }}">{{ risk_score }}</div>
+    </div>
+  </div>
+
+  <!-- Active Points -->
+  <div class="o360-kpi">
+    <div class="o360-kpi-label">Active Points</div>
+    {% set pts = officer.active_points|default(0)|float %}
+    {% set pts_color = '#059669' if pts < 4 else ('#D97706' if pts < 8 else '#C8102E') %}
+    <div class="o360-kpi-value" style="color:{{ pts_color }}">{{ pts }}</div>
+    <div class="o360-kpi-bar"><div class="o360-kpi-bar-fill" style="width:{{ [pts * 10, 100]|min }}%;background:{{ pts_color }};"></div></div>
+  </div>
+
+  <!-- Training -->
+  <div class="o360-kpi">
+    <div class="o360-kpi-label">Training</div>
+    {% set t_color = '#059669' if training_pct >= 80 else ('#D97706' if training_pct >= 50 else '#C8102E') %}
+    <div class="o360-kpi-value" style="color:{{ t_color }}">{{ training_pct }}%</div>
+    <div class="o360-kpi-bar"><div class="o360-kpi-bar-fill" style="width:{{ training_pct }}%;background:{{ t_color }};"></div></div>
+  </div>
+
+  <!-- Uniform Compliance -->
+  <div class="o360-kpi">
+    <div class="o360-kpi-label">Uniform Compliance</div>
+    {% set u_color = '#059669' if uniform_pct >= 80 else ('#D97706' if uniform_pct >= 50 else '#C8102E') %}
+    <div class="o360-kpi-value" style="color:{{ u_color }}">{{ uniform_pct }}%</div>
+    <div class="o360-kpi-bar"><div class="o360-kpi-bar-fill" style="width:{{ uniform_pct }}%;background:{{ u_color }};"></div></div>
+  </div>
+
+  <!-- Days Since Infraction -->
+  <div class="o360-kpi">
+    <div class="o360-kpi-label">Days Since Infraction</div>
+    {% if days_since is not none %}
+    {% set d_color = '#C8102E' if days_since < 14 else ('#D97706' if days_since < 30 else '#059669') %}
+    <div class="o360-kpi-value" style="color:{{ d_color }}">{{ days_since }}</div>
+    {% else %}
+    <div class="o360-kpi-value" style="color:#059669;">&#8734;</div>
+    {% endif %}
+  </div>
+</div>
+
+<!-- Tabs -->
+<div class="o360-tabs">
+  <button class="o360-tab active" onclick="o360Tab('overview')">Overview</button>
+  <button class="o360-tab" onclick="o360Tab('attendance')">Attendance</button>
+  <button class="o360-tab" onclick="o360Tab('schedule')">Schedule</button>
+  <button class="o360-tab" onclick="o360Tab('uniforms')">Uniforms</button>
+  <button class="o360-tab" onclick="o360Tab('training')">Training</button>
+  <button class="o360-tab" onclick="o360Tab('discipline')">Discipline</button>
+</div>
+
+<!-- ═══ Overview Tab ═══ -->
+<div id="tab-overview" class="o360-panel active">
+  <div class="card" style="padding:20px; margin-bottom:20px;">
+    <h3 class="section-title">Personal Information</h3>
+    <div class="o360-info-grid" style="margin-top:12px;">
+      <div class="o360-info-item"><label>Full Name</label><div>{{ officer.name }}</div></div>
+      <div class="o360-info-item"><label>Employee ID</label><div>{{ officer.employee_id or '—' }}</div></div>
+      <div class="o360-info-item"><label>Email</label><div>{% if officer.email %}<a href="mailto:{{ officer.email }}">{{ officer.email }}</a>{% else %}—{% endif %}</div></div>
+      <div class="o360-info-item"><label>Phone</label><div>{% if officer.phone %}<a href="tel:{{ officer.phone }}">{{ officer.phone }}</a>{% else %}—{% endif %}</div></div>
+      <div class="o360-info-item"><label>Job Title</label><div>{{ officer.job_title or '—' }}</div></div>
+      <div class="o360-info-item"><label>Site</label><div>{{ officer.site or '—' }}</div></div>
+      <div class="o360-info-item"><label>Hire Date</label><div>{{ officer.hire_date or '—' }}</div></div>
+      <div class="o360-info-item"><label>Status</label><div>{{ officer.status or 'Active' }}</div></div>
+      <div class="o360-info-item"><label>Discipline Level</label><div>{{ officer.discipline_level or 'None' }}</div></div>
+      <div class="o360-info-item"><label>Weekly Hours</label><div>{{ officer.weekly_hours or '—' }}</div></div>
+    </div>
+  </div>
+
+  <div class="card" style="padding:20px;">
+    <h3 class="section-title">Recent Activity</h3>
+    <div class="o360-timeline">
+      {% for ev in timeline[:15] %}
+      <div class="o360-tl-item">
+        <div class="o360-tl-date">{{ ev.date }}</div>
+        <div class="o360-tl-dot" style="background:{{ '#C8102E' if ev.severity == 'danger' else ('#D97706' if ev.severity == 'warning' else ('#059669' if ev.severity == 'success' else '#9CA3AF')) }};"></div>
+        <div>
+          <div class="o360-tl-content">{{ ev.summary }}</div>
+          <div class="o360-tl-type"><span class="badge badge-{{ ev.severity or 'info' }}" style="font-size:10px;">{{ ev.module }}</span> {{ ev.type }}</div>
+        </div>
+      </div>
+      {% else %}
+      <p style="color:var(--text-light); font-size:13px;">No activity recorded.</p>
+      {% endfor %}
+    </div>
+  </div>
+</div>
+
+<!-- ═══ Attendance Tab ═══ -->
+<div id="tab-attendance" class="o360-panel">
+  <div class="stat-cards" style="margin-bottom:20px;">
+    <div class="stat-card">
+      <div class="stat-card-label">Active Points</div>
+      <div class="stat-card-value">{{ officer.active_points|default(0) }}</div>
+    </div>
+    <div class="stat-card">
+      <div class="stat-card-label">Discipline Level</div>
+      <div class="stat-card-value" style="font-size:16px;">{{ officer.discipline_level or 'None' }}</div>
+    </div>
+    <div class="stat-card">
+      <div class="stat-card-label">Emergency Exemptions</div>
+      <div class="stat-card-value">{{ officer.emergency_exemptions_used|default(0) }}</div>
+    </div>
+  </div>
+
+  <div class="card" style="padding:20px;">
+    <h3 class="section-title">Infraction History</h3>
+    {% if infractions %}
+    <table class="data-table" style="margin-top:12px;">
+      <thead><tr><th>Date</th><th>Type</th><th>Points</th><th>Site</th><th>Description</th></tr></thead>
+      <tbody>
+        {% for inf in infractions %}
+        <tr>
+          <td>{{ inf.infraction_date }}</td>
+          <td>{{ inf.infraction_type|replace('_', ' ')|title }}</td>
+          <td><strong>{{ inf.points_assigned }}</strong></td>
+          <td>{{ inf.site or '—' }}</td>
+          <td style="max-width:250px; overflow:hidden; text-overflow:ellipsis; white-space:nowrap;">{{ inf.description or '—' }}</td>
+        </tr>
+        {% endfor %}
+      </tbody>
+    </table>
+    {% else %}
+    <p style="color:var(--text-light); font-size:13px; margin-top:12px;">No infractions recorded.</p>
+    {% endif %}
+  </div>
+</div>
+
+<!-- ═══ Schedule Tab ═══ -->
+<div id="tab-schedule" class="o360-panel">
+  <div class="card" style="padding:20px; margin-bottom:20px;">
+    <h3 class="section-title">Upcoming Assignments (Next 14 Days)</h3>
+    {% if assignments %}
+    <table class="data-table" style="margin-top:12px;">
+      <thead><tr><th>Date</th><th>Site</th><th>Start</th><th>End</th><th>Hours</th><th>Type</th><th>Status</th></tr></thead>
+      <tbody>
+        {% for a in assignments %}
+        <tr>
+          <td>{{ a.date }}</td>
+          <td>{{ a.site_name or '—' }}</td>
+          <td>{{ a.start_time or '—' }}</td>
+          <td>{{ a.end_time or '—' }}</td>
+          <td>{{ a.hours or '—' }}</td>
+          <td>{{ a.assignment_type or '—' }}</td>
+          <td><span class="badge badge-{{ 'success' if a.status == 'Confirmed' else 'info' }}">{{ a.status or '—' }}</span></td>
+        </tr>
+        {% endfor %}
+      </tbody>
+    </table>
+    {% else %}
+    <p style="color:var(--text-light); font-size:13px; margin-top:12px;">No upcoming assignments.</p>
+    {% endif %}
+  </div>
+
+  <div class="card" style="padding:20px;">
+    <h3 class="section-title">PTO & Unavailable (Next 30 Days)</h3>
+    {% if pto_entries %}
+    <table class="data-table" style="margin-top:12px;">
+      <thead><tr><th>Start</th><th>End</th><th>Type</th><th>Status</th><th>Notes</th></tr></thead>
+      <tbody>
+        {% for p in pto_entries %}
+        <tr>
+          <td>{{ p.start_date }}</td>
+          <td>{{ p.end_date }}</td>
+          <td>{{ p.pto_type or '—' }}</td>
+          <td><span class="badge badge-{{ 'success' if p.status == 'Approved' else 'warning' }}">{{ p.status or '—' }}</span></td>
+          <td>{{ p.notes or '—' }}</td>
+        </tr>
+        {% endfor %}
+      </tbody>
+    </table>
+    {% else %}
+    <p style="color:var(--text-light); font-size:13px; margin-top:12px;">No PTO entries.</p>
+    {% endif %}
+  </div>
+</div>
+
+<!-- ═══ Uniforms Tab ═══ -->
+<div id="tab-uniforms" class="o360-panel">
+  <div class="card" style="padding:20px; margin-bottom:20px;">
+    <h3 class="section-title">Outstanding Uniform Items</h3>
+    {% if uniform_items %}
+    <table class="data-table" style="margin-top:12px;">
+      <thead><tr><th>Item</th><th>Size</th><th>Qty</th><th>Date Issued</th><th>Condition</th></tr></thead>
+      <tbody>
+        {% for u in uniform_items %}
+        <tr>
+          <td>{{ u.item_name }}</td>
+          <td>{{ u.size or '—' }}</td>
+          <td>{{ u.quantity }}</td>
+          <td>{{ u.date_issued or '—' }}</td>
+          <td>{{ u.condition_issued or '—' }}</td>
+        </tr>
+        {% endfor %}
+      </tbody>
+    </table>
+    {% else %}
+    <p style="color:var(--text-light); font-size:13px; margin-top:12px;">No outstanding uniform items.</p>
+    {% endif %}
+  </div>
+
+  {% if uniform_compliance %}
+  <div class="card" style="padding:20px;">
+    <h3 class="section-title">Compliance Checklist</h3>
+    <table class="data-table" style="margin-top:12px;">
+      <thead><tr><th>Item</th><th>Required</th><th>Issued</th><th>Status</th></tr></thead>
+      <tbody>
+        {% for c in uniform_compliance %}
+        <tr>
+          <td>{{ c.item_name }}</td>
+          <td>{{ c.required }}</td>
+          <td>{{ c.issued }}</td>
+          <td>
+            {% if c.issued >= c.required %}
+            <span class="badge badge-success">&#10003; Met</span>
+            {% else %}
+            <span class="badge badge-danger">&#10007; Short {{ c.required - c.issued }}</span>
+            {% endif %}
+          </td>
+        </tr>
+        {% endfor %}
+      </tbody>
+    </table>
+  </div>
+  {% endif %}
+</div>
+
+<!-- ═══ Training Tab ═══ -->
+<div id="tab-training" class="o360-panel">
+  <div class="card" style="padding:20px; margin-bottom:20px;">
+    <h3 class="section-title">Course Progress</h3>
+    {% if courses %}
+    <table class="data-table" style="margin-top:12px;">
+      <thead><tr><th>Course</th><th>Chapters</th><th>Progress</th></tr></thead>
+      <tbody>
+        {% for c in courses %}
+        <tr>
+          <td>{{ c.title }}</td>
+          <td>{{ c.completed }} / {{ c.total }}</td>
+          <td>
+            <div style="display:flex; align-items:center; gap:8px;">
+              <div style="flex:1; height:6px; background:var(--border); border-radius:3px; min-width:80px;">
+                <div style="height:100%; width:{{ c.pct }}%; background:{{ '#059669' if c.pct == 100 else '#3B82F6' }}; border-radius:3px;"></div>
+              </div>
+              <span style="font-size:12px; font-weight:600;">{{ c.pct }}%</span>
+            </div>
+          </td>
+        </tr>
+        {% endfor %}
+      </tbody>
+    </table>
+    {% else %}
+    <p style="color:var(--text-light); font-size:13px; margin-top:12px;">No courses available.</p>
+    {% endif %}
+  </div>
+
+  {% if certificates %}
+  <div class="card" style="padding:20px; margin-bottom:20px;">
+    <h3 class="section-title">Certificates</h3>
+    <table class="data-table" style="margin-top:12px;">
+      <thead><tr><th>Course</th><th>Issued</th><th>Expires</th><th>Status</th></tr></thead>
+      <tbody>
+        {% for cert in certificates %}
+        <tr>
+          <td>{{ cert.course_title or '—' }}</td>
+          <td>{{ cert.issued_date or '—' }}</td>
+          <td>{{ cert.expiry_date or '—' }}</td>
+          <td><span class="badge badge-{{ 'success' if cert.status == 'Active' else 'warning' }}">{{ cert.status }}</span></td>
+        </tr>
+        {% endfor %}
+      </tbody>
+    </table>
+  </div>
+  {% endif %}
+
+  {% if test_attempts %}
+  <div class="card" style="padding:20px;">
+    <h3 class="section-title">Test Attempts</h3>
+    <table class="data-table" style="margin-top:12px;">
+      <thead><tr><th>Test</th><th>Course</th><th>Score</th><th>Result</th><th>Date</th></tr></thead>
+      <tbody>
+        {% for t in test_attempts %}
+        <tr>
+          <td>{{ t.test_title or '—' }}</td>
+          <td>{{ t.course_title or '—' }}</td>
+          <td>{{ t.score }}%</td>
+          <td><span class="badge badge-{{ 'success' if t.passed else 'danger' }}">{{ 'Passed' if t.passed else 'Failed' }}</span></td>
+          <td>{{ t.completed_at or '—' }}</td>
+        </tr>
+        {% endfor %}
+      </tbody>
+    </table>
+  </div>
+  {% endif %}
+</div>
+
+<!-- ═══ Discipline Tab ═══ -->
+<div id="tab-discipline" class="o360-panel">
+  <div class="card" style="padding:20px;">
+    <h3 class="section-title">Disciplinary Action History</h3>
+    {% if da_records %}
+    <table class="data-table" style="margin-top:12px;">
+      <thead><tr><th>DA ID</th><th>Violation</th><th>Level</th><th>Status</th><th>Created</th><th>Actions</th></tr></thead>
+      <tbody>
+        {% for da in da_records %}
+        <tr>
+          <td style="font-family:monospace; font-size:12px;">{{ da.da_id }}</td>
+          <td>{{ da.violation_type or '—' }}</td>
+          <td>
+            {% if da.discipline_level == 'Termination' %}<span class="badge badge-danger">{{ da.discipline_level }}</span>
+            {% elif da.discipline_level == 'Final Warning' %}<span class="badge badge-warning">{{ da.discipline_level }}</span>
+            {% else %}<span class="badge badge-info">{{ da.discipline_level or '—' }}</span>{% endif %}
+          </td>
+          <td><span class="badge badge-{{ 'success' if da.status == 'delivered' else ('warning' if da.status == 'pending_review' else 'info') }}">{{ da.status|replace('_', ' ')|title }}</span></td>
+          <td>{{ da.created_at[:10] if da.created_at else '—' }}</td>
+          <td><a href="{{ url_for('da_generator.download_pdf', da_id=da.da_id) }}" class="btn btn-secondary btn-sm">&#128196; PDF</a></td>
+        </tr>
+        {% endfor %}
+      </tbody>
+    </table>
+    {% else %}
+    <p style="color:var(--text-light); font-size:13px; margin-top:12px;">No disciplinary actions on record.</p>
+    {% endif %}
+  </div>
+</div>
+
+<script>
+function o360Tab(name) {
+  document.querySelectorAll('.o360-panel').forEach(p => p.classList.remove('active'));
+  document.querySelectorAll('.o360-tab').forEach(t => t.classList.remove('active'));
+  document.getElementById('tab-' + name).classList.add('active');
+  event.target.classList.add('active');
+}
+</script>
+{% endblock %}

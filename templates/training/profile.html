@@ -1,0 +1,88 @@
+{% extends "training/base_training.html" %}
+{% block title %}My Profile — Training Portal{% endblock %}
+
+{% block content %}
+<h1 class="trn-page-title">My Profile</h1>
+<p class="trn-page-subtitle">Manage your account and notification preferences</p>
+
+<!-- Profile Card -->
+<div class="trn-profile-card">
+  <div class="trn-profile-header">
+    {% set display_name = session.get('display_name') or session.get('username', 'User') %}
+    {% set initials = (display_name.split()[0][:1] + (display_name.split()[-1][:1] if display_name.split()|length > 1 else ''))|upper %}
+    <div class="trn-avatar trn-avatar-lg">{{ initials }}</div>
+    <div>
+      <div class="trn-profile-name">{{ display_name }}</div>
+      <div class="trn-profile-email">{{ session.get('email', '') }}</div>
+      <span class="trn-profile-role">{{ session.get('role', 'Officer')|title }}</span>
+    </div>
+  </div>
+</div>
+
+<!-- Personal Information -->
+<div class="trn-profile-card">
+  <div class="trn-section-title" style="margin-bottom:20px;">Personal Information</div>
+  <form method="post">
+    <div class="trn-form-grid">
+      <div class="trn-form-group">
+        <label class="trn-form-label">First Name</label>
+        <input type="text" class="trn-form-input" name="first_name"
+               value="{{ session.get('display_name', '').split()[0] if session.get('display_name') else '' }}"
+               placeholder="First name">
+      </div>
+      <div class="trn-form-group">
+        <label class="trn-form-label">Last Name</label>
+        <input type="text" class="trn-form-input" name="last_name"
+               value="{{ session.get('display_name', '').split()[-1] if session.get('display_name') and session.get('display_name').split()|length > 1 else '' }}"
+               placeholder="Last name">
+      </div>
+      <div class="trn-form-group full">
+        <label class="trn-form-label">Email</label>
+        <input type="email" class="trn-form-input" name="email"
+               value="{{ session.get('email', '') }}"
+               placeholder="Email address">
+      </div>
+    </div>
+    <div style="margin-top:20px;">
+      <button type="submit" class="trn-btn trn-btn-primary">Save Changes</button>
+    </div>
+  </form>
+</div>
+
+<!-- Email Notifications -->
+<div class="trn-profile-card">
+  <div class="trn-section-title" style="margin-bottom:20px;">Email Notifications</div>
+  <div>
+    <div class="trn-notification-row">
+      <div>
+        <div style="font-weight:600;">Course Updates</div>
+        <div style="font-size:12px; color:var(--trn-text-muted);">Receive notifications when new courses are published</div>
+      </div>
+      <label style="position:relative; display:inline-block; width:44px; height:24px; cursor:pointer;">
+        <input type="checkbox" name="notify_courses" checked style="opacity:0; width:0; height:0;">
+        <span style="position:absolute; top:0; left:0; right:0; bottom:0; background:var(--trn-accent); border-radius:12px; transition:0.2s;"></span>
+      </label>
+    </div>
+    <div class="trn-notification-row">
+      <div>
+        <div style="font-weight:600;">Certificate Expiry</div>
+        <div style="font-size:12px; color:var(--trn-text-muted);">Get reminded before your certificates expire</div>
+      </div>
+      <label style="position:relative; display:inline-block; width:44px; height:24px; cursor:pointer;">
+        <input type="checkbox" name="notify_expiry" checked style="opacity:0; width:0; height:0;">
+        <span style="position:absolute; top:0; left:0; right:0; bottom:0; background:var(--trn-accent); border-radius:12px; transition:0.2s;"></span>
+      </label>
+    </div>
+    <div class="trn-notification-row">
+      <div>
+        <div style="font-weight:600;">Leaderboard Updates</div>
+        <div style="font-size:12px; color:var(--trn-text-muted);">Weekly summary of your leaderboard ranking</div>
+      </div>
+      <label style="position:relative; display:inline-block; width:44px; height:24px; cursor:pointer;">
+        <input type="checkbox" name="notify_leaderboard" style="opacity:0; width:0; height:0;">
+        <span style="position:absolute; top:0; left:0; right:0; bottom:0; background:#333; border-radius:12px; transition:0.2s;"></span>
+      </label>
+    </div>
+  </div>
+</div>
+{% endblock %}

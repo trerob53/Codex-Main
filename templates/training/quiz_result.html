@@ -1,0 +1,69 @@
+{% extends "training/base_training.html" %}
+{% block title %}Quiz Results — Cerasus Hub{% endblock %}
+
+{% block tabs %}
+<div class="module-tabs">
+  {% for section_title, section_items in sidebar_sections %}
+    {% for label, endpoint in section_items %}
+    <a href="{{ url_for(endpoint) }}" class="module-tab {{ 'active' if active_tab == label else '' }}">{{ label }}</a>
+    {% endfor %}
+  {% endfor %}
+</div>
+{% endblock %}
+
+{% block content %}
+<div style="max-width:800px; margin:0 auto;">
+  <!-- Result Banner -->
+  <div class="card" style="padding:32px; text-align:center; margin-bottom:24px; border-top:4px solid {{ '#059669' if passed else '#DC2626' }};">
+    <div style="font-size:56px; margin-bottom:12px;">{{ '&#127942;' if passed else '&#128172;' }}</div>
+    <h1 style="margin:0 0 8px; font-size:28px; color:{{ '#059669' if passed else '#DC2626' }};">
+      {{ 'Quiz Passed!' if passed else 'Not Yet — Keep Trying!' }}
+    </h1>
+    <div style="font-size:48px; font-weight:700; color:{{ '#059669' if passed else '#DC2626' }}; margin:16px 0;">
+      {{ score|round(1) }}%
+    </div>
+    <p style="color:var(--text-light); margin:0; font-size:15px;">
+      {{ correct }} of {{ total }} correct &middot; Required: {{ passing }}%
+    </p>
+  </div>
+
+  <!-- Question Review -->
+  <div class="card" style="padding:24px; margin-bottom:24px;">
+    <h2 style="margin:0 0 16px; font-size:18px;">Answer Review</h2>
+    {% for q in questions %}
+    {% set a = answers[loop.index0] %}
+    <div style="padding:16px; margin-bottom:12px; border:1px solid var(--border); border-radius:8px; border-left:4px solid {{ '#059669' if a.correct else '#DC2626' }};">
+      <div style="display:flex; gap:8px; align-items:start; margin-bottom:8px;">
+        <span style="font-size:16px;">{{ '&#9989;' if a.correct else '&#10060;' }}</span>
+        <span style="font-weight:600; font-size:14px;">{{ q.question }}</span>
+      </div>
+      <div style="padding-left:28px; font-size:13px;">
+        <div style="color:var(--text-light);">
+          Your answer: <strong>{{ q.options[a.selected|int] if a.selected != '' else 'No answer' }}</strong>
+        </div>
+        {% if not a.correct %}
+        <div style="color:#059669; margin-top:4px;">
+          Correct answer: <strong>{{ q.options[q.correct|default(q.answer, true)|int] }}</strong>
+        </div>
+        {% endif %}
+      </div>
+    </div>
+    {% endfor %}
+  </div>
+
+  <!-- Actions -->
+  <div style="display:flex; justify-content:center; gap:12px; padding-bottom:24px;">
+    {% if not passed %}
+    <a href="{{ url_for('training.take_quiz', course_id=course.course_id, chapter_id=chapter.chapter_id) }}" class="btn btn-blue">
+      &#128260; Retake Quiz
+    </a>
+    {% endif %}
+    <a href="{{ url_for('training.chapter_view', course_id=course.course_id, chapter_id=chapter.chapter_id) }}" class="btn btn-secondary">
+      Back to Chapter
+    </a>
+    <a href="{{ url_for('training.course_detail', course_id=course.course_id) }}" class="btn btn-secondary">
+      Course Overview
+    </a>
+  </div>
+</div>
+{% endblock %}

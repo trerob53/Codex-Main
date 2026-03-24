@@ -1,0 +1,190 @@
+{% extends "operations/_layout.html" %}
+{% block page_title %}Incidents{% endblock %}
+{% block breadcrumb_tail %}
+<span class="sep">&#8250;</span><span class="current">Incidents</span>
+{% endblock %}
+
+{% block page_content %}
+<div class="page-header">
+  <div>
+    <h1 class="page-title">Incident Reports</h1>
+    <p class="page-subtitle">Security incident tracking and documentation</p>
+  </div>
+  <button class="btn btn-blue" onclick="document.getElementById('createIncidentModal').style.display='flex'">+ New Incident</button>
+</div>
+
+<!-- Filters -->
+<div class="filter-bar">
+  <form method="get" style="display:flex;gap:8px;align-items:center;flex-wrap:wrap;width:100%;">
+    <select name="site" class="filter-select" onchange="this.form.submit()">
+      <option value="">All Sites</option>
+      {% for s in sites %}
+      <option value="{{ s }}" {% if site_filter == s %}selected{% endif %}>{{ s }}</option>
+      {% endfor %}
+    </select>
+    <select name="status" class="filter-select" onchange="this.form.submit()">
+      <option value="">All Statuses</option>
+      <option value="Open" {% if status_filter == 'Open' %}selected{% endif %}>Open</option>
+      <option value="Under Review" {% if status_filter == 'Under Review' %}selected{% endif %}>Under Review</option>
+      <option value="Closed" {% if status_filter == 'Closed' %}selected{% endif %}>Closed</option>
+    </select>
+    {% if site_filter or status_filter %}
+    <a href="{{ url_for('operations.incidents') }}" class="btn btn-secondary btn-sm">Clear</a>
+    {% endif %}
+  </form>
+</div>
+
+<div style="margin:8px 0;color:var(--text-light);font-size:13px;">{{ incidents|length }} incident{{ 's' if incidents|length != 1 else '' }}</div>
+
+<table class="data-table">
+  <thead>
+    <tr>
+      <th>Date</th>
+      <th>Time</th>
+      <th>Site</th>
+      <th>Type</th>
+      <th>Severity</th>
+      <th>Reporting Officer</th>
+      <th>Status</th>
+      <th>Description</th>
+    </tr>
+  </thead>
+  <tbody>
+    {% for inc in incidents %}
+    <tr>
+      <td>{{ inc.incident_date or '—' }}</td>
+      <td>{{ inc.incident_time or '—' }}</td>
+      <td><strong>{{ inc.site or '—' }}</strong></td>
+      <td>{{ inc.incident_type or '—' }}</td>
+      <td>
+        {% if inc.severity == 'high' or inc.severity == 'critical' %}
+        <span class="badge badge-danger">{{ inc.severity|capitalize }}</span>
+        {% elif inc.severity == 'medium' %}
+        <span class="badge badge-warning">{{ inc.severity|capitalize }}</span>
+        {% else %}
+        <span class="badge badge-info">{{ inc.severity|capitalize }}</span>
+        {% endif %}
+      </td>
+      <td>{{ inc.reporting_officer or '—' }}</td>
+      <td>
+        {% if inc.status == 'Open' %}
+        <span class="badge badge-warning">Open</span>
+        {% elif inc.status == 'Closed' %}
+        <span class="badge badge-success">Closed</span>
+        {% else %}
+        <span class="badge badge-blue">{{ inc.status }}</span>
+        {% endif %}
+      </td>
+      <td style="max-width:250px;overflow:hidden;text-overflow:ellipsis;">{{ inc.description or '—' }}</td>
+    </tr>
+    {% endfor %}
+    {% if not incidents %}
+    <tr><td colspan="8" style="text-align:center;color:var(--text-light);padding:32px;">No incidents found.</td></tr>
+    {% endif %}
+  </tbody>
+</table>
+
+<!-- Create Incident Modal -->
+<div id="createIncidentModal" class="modal-overlay" style="display:none;">
+  <div class="modal-card" style="max-width:640px;max-height:90vh;overflow-y:auto;">
+    <h2 class="section-title">New Incident Report</h2>
+    <form method="post" action="{{ url_for('operations.incidents_create') }}">
+      <div style="display:grid;grid-template-columns:1fr 1fr;gap:12px;">
+        <div>
+          <label class="form-label">Site</label>
+          <select name="site" class="form-input" required>
+            <option value="">Select site</option>
+            {% for s in sites %}
+            <option value="{{ s }}">{{ s }}</option>
+            {% endfor %}
+          </select>
+        </div>
+        <div>
+          <label class="form-label">Incident Date</label>
+          <input type="date" name="incident_date" class="form-input" required>
+        </div>
+        <div>
+          <label class="form-label">Incident Time</label>
+          <input type="time" name="incident_time" class="form-input">
+        </div>
+        <div>
+          <label class="form-label">Incident Type</label>
+          <select name="incident_type" class="form-input">
+            <option>Trespass</option>
+            <option>Theft</option>
+            <option>Vandalism</option>
+            <option>Assault</option>
+            <option>Medical</option>
+            <option>Fire</option>
+            <option>Suspicious Activity</option>
+            <option>Property Damage</option>
+            <option>Other</option>
+          </select>
+        </div>
+        <div>
+          <label class="form-label">Severity</label>
+          <select name="severity" class="form-input">
+            <option value="low">Low</option>
+            <option value="medium">Medium</option>
+            <option value="high">High</option>
+            <option value="critical">Critical</option>
+          </select>
+        </div>
+        <div>
+          <label class="form-label">Reporting Officer</label>
+          <input type="text" name="reporting_officer" class="form-input">
+        </div>
+      </div>
+      <div style="margin-top:12px;">
+        <label class="form-label">Description</label>
+        <textarea name="description" class="form-input" rows="3" required></textarea>
+      </div>
+      <div style="margin-top:12px;">
+        <label class="form-label">Persons Involved</label>
+        <textarea name="persons_involved" class="form-input" rows="2"></textarea>
+      </div>
+      <div style="margin-top:12px;">
+        <label class="form-label">Actions Taken</label>
+        <textarea name="actions_taken" class="form-input" rows="2"></textarea>
+      </div>
+      <div style="display:grid;grid-template-columns:1fr 1fr;gap:12px;margin-top:12px;">
+        <div>
+          <label style="display:flex;align-items:center;gap:6px;font-size:13px;">
+            <input type="checkbox" name="police_called" value="1"> Police Called
+          </label>
+        </div>
+        <div>
+          <label class="form-label">Police Report #</label>
+          <input type="text" name="police_report_number" class="form-input">
+        </div>
+        <div>
+          <label style="display:flex;align-items:center;gap:6px;font-size:13px;">
+            <input type="checkbox" name="medical_required" value="1"> Medical Required
+          </label>
+        </div>
+        <div>
+          <label style="display:flex;align-items:center;gap:6px;font-size:13px;">
+            <input type="checkbox" name="property_damage" value="1"> Property Damage
+          </label>
+        </div>
+      </div>
+      <div style="display:grid;grid-template-columns:1fr 1fr;gap:12px;margin-top:12px;">
+        <div>
+          <label class="form-label">Witness Names</label>
+          <input type="text" name="witness_names" class="form-input">
+        </div>
+        <div>
+          <label style="display:flex;align-items:center;gap:6px;font-size:13px;">
+            <input type="checkbox" name="supervisor_notified" value="1"> Supervisor Notified
+          </label>
+          <input type="text" name="supervisor_name" class="form-input" placeholder="Supervisor name" style="margin-top:4px;">
+        </div>
+      </div>
+      <div style="margin-top:16px;display:flex;gap:8px;justify-content:flex-end;">
+        <button type="button" class="btn btn-secondary" onclick="this.closest('.modal-overlay').style.display='none'">Cancel</button>
+        <button type="submit" class="btn btn-blue">Submit Incident</button>
+      </div>
+    </form>
+  </div>
+</div>
+{% endblock %}

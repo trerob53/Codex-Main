@@ -1,0 +1,329 @@
+{% extends "training/base_training.html" %}
+{% block title %}Build: {{ course.title }} — Training Portal{% endblock %}
+
+{% block content %}
+<div style="display:flex; justify-content:space-between; align-items:center; margin-bottom:4px;">
+  <h1 class="trn-page-title">{{ course.title }}</h1>
+  <a href="{{ url_for('training.manage_courses') }}" class="trn-btn trn-btn-secondary trn-btn-sm">&larr; Back to Courses</a>
+</div>
+<p class="trn-page-subtitle">Course Builder &mdash; Manage modules, chapters, and tests</p>
+
+<!-- ═══════════════════════════════════════════════════
+     MODULES
+     ═══════════════════════════════════════════════════ -->
+<div style="display:flex; justify-content:space-between; align-items:center; margin:24px 0 12px;">
+  <h2 style="font-size:18px; font-weight:700; color:var(--trn-text);">Modules</h2>
+  <button class="trn-btn trn-btn-primary trn-btn-sm" onclick="document.getElementById('add-module-modal').style.display='flex'">+ Add Module</button>
+</div>
+
+{% if modules %}
+<div class="trn-card" style="padding:0; overflow:hidden;">
+  <table class="trn-table">
+    <thead><tr><th>Title</th><th>Order</th><th>Chapters</th><th>Actions</th></tr></thead>
+    <tbody>
+      {% for mod in modules %}
+      {% set mod_chapters = chapters|selectattr('module_id', 'equalto', mod.module_id)|list %}
+      <tr>
+        <td style="font-weight:600;">{{ mod.title }}</td>
+        <td>{{ mod.sort_order }}</td>
+        <td>{{ mod_chapters|length }}</td>
+        <td>
+          <div style="display:flex;gap:6px;">
+            <button class="trn-btn trn-btn-secondary trn-btn-sm" onclick="editModule('{{ mod.module_id }}', '{{ mod.title|e }}', {{ mod.sort_order }})">Edit</button>
+            <form method="post" style="display:inline;" onsubmit="return confirm('Delete this module and all its chapters?')">
+              <input type="hidden" name="action" value="delete_module">
+              <input type="hidden" name="module_id" value="{{ mod.module_id }}">
+              <button type="submit" class="trn-btn trn-btn-sm" style="background:rgba(232,23,23,0.15); color:var(--trn-accent-light); border:none;">Del</button>
+            </form>
+          </div>
+        </td>
+      </tr>
+      {% endfor %}
+    </tbody>
+  </table>
+</div>
+{% else %}
+<div class="trn-card" style="padding:24px; text-align:center; color:var(--trn-text-secondary);">
+  No modules yet. Add a module to organize your chapters.
+</div>
+{% endif %}
+
+<!-- ═══════════════════════════════════════════════════
+     CHAPTERS
+     ═══════════════════════════════════════════════════ -->
+<div style="display:flex; justify-content:space-between; align-items:center; margin:32px 0 12px;">
+  <h2 style="font-size:18px; font-weight:700; color:var(--trn-text);">Chapters</h2>
+  <button class="trn-btn trn-btn-primary trn-btn-sm" onclick="document.getElementById('add-chapter-modal').style.display='flex'">+ Add Chapter</button>
+</div>
+
+{% if chapters %}
+<div class="trn-card" style="padding:0; overflow:hidden;">
+  <table class="trn-table">
+    <thead><tr><th>Title</th><th>Module</th><th>Order</th><th>Has Test</th><th>Actions</th></tr></thead>
+    <tbody>
+      {% for ch in chapters %}
+      <tr>
+        <td style="font-weight:600;">{{ ch.title }}</td>
+        <td style="font-size:12px; color:var(--trn-text-secondary);">
+          {% for m in modules if m.module_id == ch.module_id %}{{ m.title }}{% endfor %}
+          {% if not ch.module_id %}<em>Unassigned</em>{% endif %}
+        </td>
+        <td>{{ ch.sort_order }}</td>
+        <td>
+          {% if ch.has_test %}<span style="color:var(--trn-green);">Yes</span>
+          {% else %}<span style="color:var(--trn-text-muted);">No</span>{% endif %}
+        </td>
+        <td>
+          <div style="display:flex;gap:6px;">
+            <button class="trn-btn trn-btn-secondary trn-btn-sm" onclick="editChapter('{{ ch.chapter_id }}')">Edit</button>
+            {% if ch.has_test %}
+            <button class="trn-btn trn-btn-sm" style="background:rgba(59,130,246,0.15); color:var(--trn-blue); border:none;" onclick="editTest('{{ ch.chapter_id }}')">Test</button>
+            {% endif %}
+            <form method="post" style="display:inline;" onsubmit="return confirm('Delete this chapter?')">
+              <input type="hidden" name="action" value="delete_chapter">
+              <input type="hidden" name="chapter_id" value="{{ ch.chapter_id }}">
+              <button type="submit" class="trn-btn trn-btn-sm" style="background:rgba(232,23,23,0.15); color:var(--trn-accent-light); border:none;">Del</button>
+            </form>
+          </div>
+        </td>
+      </tr>
+      {% endfor %}
+    </tbody>
+  </table>
+</div>
+{% else %}
+<div class="trn-card" style="padding:24px; text-align:center; color:var(--trn-text-secondary);">
+  No chapters yet. Add chapters with content and optional tests.
+</div>
+{% endif %}
+
+<!-- ═══════════════════════════════════════════════════
+     MODALS
+     ═══════════════════════════════════════════════════ -->
+
+<!-- Add Module Modal -->
+<div id="add-module-modal" class="trn-modal-overlay" style="display:none;">
+  <div class="trn-card trn-modal-card">
+    <h3 style="margin-bottom:16px;">Add Module</h3>
+    <form method="post">
+      <input type="hidden" name="action" value="add_module">
+      <div class="trn-form-group"><label class="trn-form-label">Title</label>
+        <input type="text" class="trn-form-input" name="title" required placeholder="Module title"></div>
+      <div class="trn-form-group"><label class="trn-form-label">Sort Order</label>
+        <input type="number" class="trn-form-input" name="sort_order" value="{{ modules|length + 1 }}" min="0"></div>
+      <div style="display:flex;gap:8px;justify-content:flex-end;margin-top:16px;">
+        <button type="button" class="trn-btn trn-btn-secondary" onclick="this.closest('.trn-modal-overlay').style.display='none'">Cancel</button>
+        <button type="submit" class="trn-btn trn-btn-primary">Add Module</button>
+      </div>
+    </form>
+  </div>
+</div>
+
+<!-- Edit Module Modal -->
+<div id="edit-module-modal" class="trn-modal-overlay" style="display:none;">
+  <div class="trn-card trn-modal-card">
+    <h3 style="margin-bottom:16px;">Edit Module</h3>
+    <form method="post">
+      <input type="hidden" name="action" value="update_module">
+      <input type="hidden" name="module_id" id="em-module-id">
+      <div class="trn-form-group"><label class="trn-form-label">Title</label>
+        <input type="text" class="trn-form-input" name="title" id="em-title" required></div>
+      <div class="trn-form-group"><label class="trn-form-label">Sort Order</label>
+        <input type="number" class="trn-form-input" name="sort_order" id="em-sort" min="0"></div>
+      <div style="display:flex;gap:8px;justify-content:flex-end;margin-top:16px;">
+        <button type="button" class="trn-btn trn-btn-secondary" onclick="this.closest('.trn-modal-overlay').style.display='none'">Cancel</button>
+        <button type="submit" class="trn-btn trn-btn-primary">Save</button>
+      </div>
+    </form>
+  </div>
+</div>
+
+<!-- Add Chapter Modal -->
+<div id="add-chapter-modal" class="trn-modal-overlay" style="display:none;">
+  <div class="trn-card trn-modal-card" style="max-width:700px;">
+    <h3 style="margin-bottom:16px;">Add Chapter</h3>
+    <form method="post">
+      <input type="hidden" name="action" value="add_chapter">
+      <div style="display:grid;grid-template-columns:1fr 1fr;gap:12px;">
+        <div class="trn-form-group"><label class="trn-form-label">Title</label>
+          <input type="text" class="trn-form-input" name="title" required placeholder="Chapter title"></div>
+        <div class="trn-form-group"><label class="trn-form-label">Module</label>
+          <select class="trn-select" name="module_id" style="width:100%;">
+            <option value="">-- No Module --</option>
+            {% for m in modules %}<option value="{{ m.module_id }}">{{ m.title }}</option>{% endfor %}
+          </select></div>
+        <div class="trn-form-group"><label class="trn-form-label">Sort Order</label>
+          <input type="number" class="trn-form-input" name="sort_order" value="{{ chapters|length + 1 }}" min="0"></div>
+        <div class="trn-form-group" style="display:flex;align-items:flex-end;">
+          <label style="display:flex;align-items:center;gap:6px;font-size:13px;cursor:pointer;">
+            <input type="checkbox" name="has_test" value="1"> Include a test for this chapter
+          </label></div>
+      </div>
+      <div class="trn-form-group" style="margin-top:12px;"><label class="trn-form-label">Content</label>
+        <textarea class="trn-form-input" name="content" rows="10" placeholder="Enter chapter content..." style="resize:vertical;font-size:14px;line-height:1.7;"></textarea></div>
+      <div style="display:flex;gap:8px;justify-content:flex-end;margin-top:16px;">
+        <button type="button" class="trn-btn trn-btn-secondary" onclick="this.closest('.trn-modal-overlay').style.display='none'">Cancel</button>
+        <button type="submit" class="trn-btn trn-btn-primary">Add Chapter</button>
+      </div>
+    </form>
+  </div>
+</div>
+
+<!-- Edit Chapter Modal -->
+<div id="edit-chapter-modal" class="trn-modal-overlay" style="display:none;">
+  <div class="trn-card trn-modal-card" style="max-width:700px;">
+    <h3 style="margin-bottom:16px;">Edit Chapter</h3>
+    <form method="post">
+      <input type="hidden" name="action" value="update_chapter">
+      <input type="hidden" name="chapter_id" id="ec-chapter-id">
+      <div style="display:grid;grid-template-columns:1fr 1fr;gap:12px;">
+        <div class="trn-form-group"><label class="trn-form-label">Title</label>
+          <input type="text" class="trn-form-input" name="title" id="ec-title" required></div>
+        <div class="trn-form-group"><label class="trn-form-label">Module</label>
+          <select class="trn-select" name="module_id" id="ec-module" style="width:100%;">
+            <option value="">-- No Module --</option>
+            {% for m in modules %}<option value="{{ m.module_id }}">{{ m.title }}</option>{% endfor %}
+          </select></div>
+        <div class="trn-form-group"><label class="trn-form-label">Sort Order</label>
+          <input type="number" class="trn-form-input" name="sort_order" id="ec-sort" min="0"></div>
+        <div class="trn-form-group" style="display:flex;align-items:flex-end;">
+          <label style="display:flex;align-items:center;gap:6px;font-size:13px;cursor:pointer;">
+            <input type="checkbox" name="has_test" value="1" id="ec-hastest"> Include a test
+          </label></div>
+      </div>
+      <div class="trn-form-group" style="margin-top:12px;"><label class="trn-form-label">Content</label>
+        <textarea class="trn-form-input" name="content" id="ec-content" rows="10" style="resize:vertical;font-size:14px;line-height:1.7;"></textarea></div>
+      <div style="display:flex;gap:8px;justify-content:flex-end;margin-top:16px;">
+        <button type="button" class="trn-btn trn-btn-secondary" onclick="this.closest('.trn-modal-overlay').style.display='none'">Cancel</button>
+        <button type="submit" class="trn-btn trn-btn-primary">Save</button>
+      </div>
+    </form>
+  </div>
+</div>
+
+<!-- Test Builder Modal -->
+<div id="test-modal" class="trn-modal-overlay" style="display:none;">
+  <div class="trn-card trn-modal-card" style="max-width:700px; max-height:85vh; overflow-y:auto;">
+    <h3 style="margin-bottom:16px;">Test Builder</h3>
+    <form method="post" id="test-form">
+      <input type="hidden" name="action" value="save_test">
+      <input type="hidden" name="chapter_id" id="tb-chapter-id">
+      <div style="display:grid;grid-template-columns:1fr 1fr;gap:12px;">
+        <div class="trn-form-group"><label class="trn-form-label">Test Title</label>
+          <input type="text" class="trn-form-input" name="test_title" id="tb-title" value="Quiz"></div>
+        <div class="trn-form-group"><label class="trn-form-label">Passing Score (%)</label>
+          <input type="number" class="trn-form-input" name="passing_score" id="tb-passing" value="70" min="0" max="100"></div>
+      </div>
+      <div style="margin-top:16px;margin-bottom:8px;display:flex;justify-content:space-between;align-items:center;">
+        <label class="trn-form-label" style="margin:0;">Questions</label>
+        <button type="button" class="trn-btn trn-btn-secondary trn-btn-sm" onclick="addQuestion()">+ Add Question</button>
+      </div>
+      <div id="questions-container"></div>
+      <div style="display:flex;gap:8px;justify-content:flex-end;margin-top:16px;">
+        <button type="button" class="trn-btn trn-btn-secondary" onclick="this.closest('.trn-modal-overlay').style.display='none'">Cancel</button>
+        <button type="submit" class="trn-btn trn-btn-primary">Save Test</button>
+      </div>
+    </form>
+  </div>
+</div>
+
+<style>
+.trn-modal-overlay { position:fixed; inset:0; background:rgba(0,0,0,0.6); z-index:300; display:flex; align-items:center; justify-content:center; }
+.trn-modal-card { width:480px; max-width:92vw; padding:24px; }
+.trn-modal-overlay .trn-modal-card { cursor:default; }
+.q-card { background:var(--trn-card); border:1px solid var(--trn-card-border); border-radius:8px; padding:16px; margin-bottom:12px; }
+.q-card .trn-form-input { margin-bottom:6px; }
+</style>
+
+<script>
+// Chapter data for edit modal
+var chapterData = {
+  {% for ch in chapters %}
+  '{{ ch.chapter_id }}': {
+    title: {{ ch.title|tojson }},
+    module_id: '{{ ch.module_id or '' }}',
+    sort_order: {{ ch.sort_order }},
+    has_test: {{ ch.has_test }},
+    content: {{ ch.content|tojson if ch.content else '""' }}
+  },
+  {% endfor %}
+};
+
+// Test data for test modal
+var testData = {
+  {% for ch_id, t in test_map.items() %}
+  '{{ ch_id }}': {
+    title: {{ t.title|tojson }},
+    passing_score: {{ t.passing_score }},
+    questions: {{ t.questions|tojson }}
+  },
+  {% endfor %}
+};
+
+function editModule(id, title, sort) {
+  document.getElementById('em-module-id').value = id;
+  document.getElementById('em-title').value = title;
+  document.getElementById('em-sort').value = sort;
+  document.getElementById('edit-module-modal').style.display = 'flex';
+}
+
+function editChapter(id) {
+  var d = chapterData[id];
+  if (!d) return;
+  document.getElementById('ec-chapter-id').value = id;
+  document.getElementById('ec-title').value = d.title;
+  document.getElementById('ec-module').value = d.module_id;
+  document.getElementById('ec-sort').value = d.sort_order;
+  document.getElementById('ec-hastest').checked = !!d.has_test;
+  document.getElementById('ec-content').value = d.content;
+  document.getElementById('edit-chapter-modal').style.display = 'flex';
+}
+
+var questionCount = 0;
+function addQuestion(data) {
+  var idx = questionCount++;
+  var q = data || { question: '', options: ['', '', '', ''], correct: 0 };
+  var html = '<div class="q-card" id="q-' + idx + '">';
+  html += '<div style="display:flex;justify-content:space-between;align-items:center;margin-bottom:8px;">';
+  html += '<strong style="font-size:13px;">Question ' + (idx + 1) + '</strong>';
+  html += '<button type="button" class="trn-btn trn-btn-sm" style="background:rgba(232,23,23,0.15);color:var(--trn-accent-light);border:none;padding:2px 8px;" onclick="this.closest(\'.q-card\').remove()">Remove</button>';
+  html += '</div>';
+  html += '<input type="text" class="trn-form-input" name="q_' + idx + '_text" placeholder="Question text" value="' + escHtml(q.question) + '" required>';
+  for (var i = 0; i < 4; i++) {
+    var checked = q.correct === i ? ' checked' : '';
+    html += '<div style="display:flex;gap:8px;align-items:center;">';
+    html += '<input type="radio" name="q_' + idx + '_correct" value="' + i + '"' + checked + '>';
+    html += '<input type="text" class="trn-form-input" name="q_' + idx + '_opt_' + i + '" placeholder="Option ' + (i+1) + '" value="' + escHtml(q.options[i] || '') + '" style="flex:1;margin:0;">';
+    html += '</div>';
+  }
+  html += '</div>';
+  document.getElementById('questions-container').insertAdjacentHTML('beforeend', html);
+}
+
+function editTest(chapterId) {
+  document.getElementById('tb-chapter-id').value = chapterId;
+  document.getElementById('questions-container').innerHTML = '';
+  questionCount = 0;
+  var t = testData[chapterId];
+  if (t) {
+    document.getElementById('tb-title').value = t.title;
+    document.getElementById('tb-passing').value = t.passing_score;
+    (t.questions || []).forEach(function(q) { addQuestion(q); });
+  } else {
+    document.getElementById('tb-title').value = 'Quiz';
+    document.getElementById('tb-passing').value = 70;
+    addQuestion();
+  }
+  document.getElementById('test-modal').style.display = 'flex';
+}
+
+function escHtml(s) {
+  return String(s).replace(/&/g,'&amp;').replace(/"/g,'&quot;').replace(/</g,'&lt;').replace(/>/g,'&gt;');
+}
+
+// Close modals on overlay click
+document.querySelectorAll('.trn-modal-overlay').forEach(function(m) {
+  m.addEventListener('click', function(e) { if (e.target === this) this.style.display = 'none'; });
+});
+</script>
+{% endblock %}

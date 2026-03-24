@@ -1,0 +1,96 @@
+{% extends "training/base_training.html" %}
+{% block title %}My Courses — Training Portal{% endblock %}
+
+{% block content %}
+<h1 class="trn-page-title">My Courses</h1>
+<p class="trn-page-subtitle">Browse and track your course progress</p>
+
+<!-- Search & Filters -->
+<div class="trn-search-bar">
+  <div class="trn-search-wrap">
+    <span class="trn-search-icon">&#128269;</span>
+    <input type="text" class="trn-search-input" id="course-search" placeholder="Search courses..." oninput="filterCourses()">
+  </div>
+  <select class="trn-select" id="cat-filter" onchange="filterCourses()">
+    <option value="">All Categories</option>
+    {% set cats = courses|map(attribute='category')|select('string')|unique|sort %}
+    {% for c in cats %}
+    {% if c %}<option value="{{ c }}">{{ c }}</option>{% endif %}
+    {% endfor %}
+  </select>
+  <select class="trn-select" id="status-filter" onchange="filterCourses()">
+    <option value="">All Progress</option>
+    <option value="completed">Completed</option>
+    <option value="in_progress">In Progress</option>
+    <option value="not_started">Not Started</option>
+  </select>
+</div>
+
+<!-- Course Grid -->
+<div class="trn-courses-grid" id="courses-grid">
+  {% for course in courses %}
+  {% set pct = course.completion_pct|default(0)|round|int %}
+  {% set progress_class = 'completed' if pct >= 100 else 'in_progress' if pct > 0 else 'not_started' %}
+  <a href="{{ url_for('training.course_detail', course_id=course.course_id) }}"
+     class="trn-course-card"
+     data-category="{{ course.category or '' }}"
+     data-progress="{{ progress_class }}"
+     data-search="{{ course.title|lower }} {{ course.category|lower if course.category else '' }} {{ course.description|lower if course.description else '' }}">
+
+    {% if course.image_url %}
+    <img class="trn-course-card-img" src="{{ course.image_url }}" alt="{{ course.title }}">
+    {% else %}
+    <div class="trn-course-card-img" style="display:flex; align-items:center; justify-content:center; font-size:48px; color:#444;">&#128218;</div>
+    {% endif %}
+
+    <div class="trn-course-card-body">
+      <div class="trn-course-card-title">{{ course.title }}</div>
+      <div class="trn-course-card-desc">{{ course.description or 'No description available.' }}</div>
+      <div class="trn-course-card-meta">
+        <span class="trn-badge">{{ course.category or 'General' }}</span>
+        <span>{{ course.status or 'Draft' }}</span>
+      </div>
+
+      <!-- Progress Bar -->
+      <div style="display:flex; justify-content:space-between; font-size:12px; color:var(--trn-text-muted); margin-bottom:4px;">
+        <span>Progress</span>
+        <span style="font-weight:600; color:{{ 'var(--trn-green)' if pct >= 100 else 'var(--trn-blue)' if pct > 0 else 'var(--trn-text-muted)' }};">{{ pct }}%</span>
+      </div>
+      <div class="trn-progress-bar">
+        <div class="trn-progress-bar-fill {{ 'green' if pct >= 100 else 'blue' }}" style="width:{{ pct }}%;"></div>
+      </div>
+
+      <div class="trn-course-card-status">
+        {% if pct >= 100 %}
+        <span style="color:var(--trn-green);">&#10003; Completed</span>
+        {% elif pct > 0 %}
+        <span style="color:var(--trn-blue);">In Progress</span>
+        {% else %}
+        <span>Not Started</span>
+        {% endif %}
+      </div>
+    </div>
+  </a>
+  {% else %}
+  <div class="trn-empty-state" style="grid-column:1/-1;">
+    <div class="trn-empty-state-icon">&#128218;</div>
+    <div class="trn-empty-state-text">No courses available</div>
+    <div class="trn-empty-state-sub">Check back later for new training content.</div>
+  </div>
+  {% endfor %}
+</div>
+
+<script>
+function filterCourses() {
+  var query = document.getElementById('course-search').value.toLowerCase();
+  var catFilter = document.getElementById('cat-filter').value;
+  var statusFilter = document.getElementById('status-filter').value;
+  document.querySelectorAll('.trn-course-card').forEach(function(card) {
+    var textMatch = !query || card.dataset.search.includes(query);
+    var catMatch = !catFilter || card.dataset.category === catFilter;
+    var statusMatch = !statusFilter || card.dataset.progress === statusFilter;
+    card.style.display = textMatch && catMatch && statusMatch ? '' : 'none';
+  });
+}
+</script>
+{% endblock %}

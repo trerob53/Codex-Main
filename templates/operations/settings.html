@@ -1,0 +1,51 @@
+{% extends "operations/_layout.html" %}
+{% block page_title %}Settings{% endblock %}
+{% block breadcrumb_tail %}
+<span class="sep">&#8250;</span><span class="current">Settings</span>
+{% endblock %}
+
+{% block page_content %}
+<div class="page-header">
+  <div>
+    <h1 class="page-title">Operations Settings</h1>
+    <p class="page-subtitle">Module configuration and preferences</p>
+  </div>
+</div>
+
+<div class="card" style="max-width:640px;">
+  <div class="section-title">General</div>
+  <table class="data-table" style="margin-bottom:0;">
+    <tbody>
+      <tr>
+        <td style="width:200px;"><strong>Module</strong></td>
+        <td>Operations</td>
+      </tr>
+      <tr>
+        <td><strong>Data Tables</strong></td>
+        <td>ops_flex_team, ops_records, ops_assignments, ops_pto_entries, ops_incidents, ops_handoff_notes, ops_open_requests, ops_anchor_schedules, ops_positions, ops_candidates, ops_certifications</td>
+      </tr>
+      <tr>
+        <td><strong>Shared Tables</strong></td>
+        <td>sites, audit_log</td>
+      </tr>
+    </tbody>
+  </table>
+</div>
+
+<div class="card" style="max-width:640px;margin-top:16px;">
+  <div class="section-title">Quick Actions</div>
+  <div style="display:flex;gap:8px;flex-wrap:wrap;">
+    <a href="{{ url_for('operations.reports') }}" class="btn btn-blue btn-sm">View Reports</a>
+    <a href="{{ url_for('operations.audit_log') }}" class="btn btn-secondary btn-sm">Audit Log</a>
+  </div>
+</div>
+
+<div class="card" style="max-width:640px;margin-top:16px;">
+  <div class="section-title">About</div>
+  <p style="color:var(--text-light);font-size:14px;">
+    The Operations module manages flex officer dispatch, site coverage, scheduling, PTO tracking,
+    handoff notes, incident reporting, and position hiring pipeline.
+    All data is stored in a shared SQLite database with the rest of Cerasus Hub.
+  </p>
+</div>
+{% endblock %}

@@ -1,0 +1,78 @@
+{% extends "operations/_layout.html" %}
+{% block page_title %}Flex Board{% endblock %}
+{% block breadcrumb_tail %}
+<span class="sep">&#8250;</span><span class="current">Flex Board</span>
+{% endblock %}
+
+{% block page_content %}
+<div class="page-header">
+  <div>
+    <h1 class="page-title">Flex Board</h1>
+    <p class="page-subtitle">Flex team roster and availability overview</p>
+  </div>
+</div>
+
+<!-- Filters -->
+<div class="filter-bar">
+  <form method="get" style="display:flex;gap:8px;align-items:center;flex-wrap:wrap;width:100%;">
+    <input type="text" name="q" value="{{ q }}" placeholder="Search officers..." class="filter-search">
+    <select name="status" class="filter-select" onchange="this.form.submit()">
+      <option value="">Active Only</option>
+      <option value="all" {% if status_filter == 'all' %}selected{% endif %}>All Statuses</option>
+      <option value="Active" {% if status_filter == 'Active' %}selected{% endif %}>Active</option>
+      <option value="Inactive" {% if status_filter == 'Inactive' %}selected{% endif %}>Inactive</option>
+    </select>
+    <button type="submit" class="btn btn-blue btn-sm">Search</button>
+    {% if q or status_filter %}
+    <a href="{{ url_for('operations.flex_board') }}" class="btn btn-secondary btn-sm">Clear</a>
+    {% endif %}
+  </form>
+</div>
+
+<!-- Results count -->
+<div style="margin:8px 0;color:var(--text-light);font-size:13px;">{{ officers|length }} officer{{ 's' if officers|length != 1 else '' }} found</div>
+
+<!-- Officer Table -->
+<table class="data-table">
+  <thead>
+    <tr>
+      <th>Name</th>
+      <th>Employee ID</th>
+      <th>Role</th>
+      <th>Site</th>
+      <th>Weekly Hours</th>
+      <th>Status</th>
+      <th>Phone</th>
+      <th>Email</th>
+    </tr>
+  </thead>
+  <tbody>
+    {% for off in officers %}
+    <tr>
+      <td>
+        <div style="display:flex;align-items:center;gap:8px;">
+          <span class="avatar" style="width:28px;height:28px;font-size:11px;">{{ off.name[:2]|upper if off.name else '??' }}</span>
+          <strong>{{ off.name|officer_link(off.member_id) if off.name else 'N/A' }}</strong>
+        </div>
+      </td>
+      <td>{{ off.employee_id or '—' }}</td>
+      <td>{{ off.role or off.job_title or '—' }}</td>
+      <td>{{ off.site or '—' }}</td>
+      <td>{{ off.weekly_hours or '—' }}</td>
+      <td>
+        {% if off.status == 'Active' %}
+        <span class="badge badge-success">Active</span>
+        {% else %}
+        <span class="badge badge-danger">{{ off.status }}</span>
+        {% endif %}
+      </td>
+      <td>{{ off.phone or '—' }}</td>
+      <td>{{ off.email or '—' }}</td>
+    </tr>
+    {% endfor %}
+    {% if not officers %}
+    <tr><td colspan="8" style="text-align:center;color:var(--text-light);padding:32px;">No officers found.</td></tr>
+    {% endif %}
+  </tbody>
+</table>
+{% endblock %}

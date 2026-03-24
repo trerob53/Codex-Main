@@ -1,0 +1,192 @@
+{% extends "operations/_layout.html" %}
+{% block page_title %}Open Requests{% endblock %}
+{% block breadcrumb_tail %}
+<span class="sep">&#8250;</span><span class="current">Open Requests</span>
+{% endblock %}
+
+{% block page_content %}
+<div class="page-header">
+  <div>
+    <h1 class="page-title">Open Requests</h1>
+    <p class="page-subtitle">Coverage requests and dispatch queue</p>
+  </div>
+  <button class="btn btn-blue" onclick="document.getElementById('createRequestModal').style.display='flex'">+ New Request</button>
+</div>
+
+<!-- KPI Cards -->
+<div class="stat-cards">
+  <div class="stat-card">
+    <div class="stat-card-label">Open</div>
+    <div class="stat-card-value" style="color:#DC2626;">{{ req_summary.open }}</div>
+  </div>
+  <div class="stat-card">
+    <div class="stat-card-label">Urgent</div>
+    <div class="stat-card-value" style="color:#D97706;">{{ req_summary.urgent }}</div>
+  </div>
+  <div class="stat-card">
+    <div class="stat-card-label">Filled Today</div>
+    <div class="stat-card-value" style="color:#059669;">{{ req_summary.filled_today }}</div>
+  </div>
+  <div class="stat-card">
+    <div class="stat-card-label">Fill Rate</div>
+    <div class="stat-card-value">{{ req_summary.fill_rate }}%</div>
+  </div>
+</div>
+
+<!-- Filters -->
+<div class="filter-bar">
+  <form method="get" style="display:flex;gap:8px;align-items:center;flex-wrap:wrap;width:100%;">
+    <select name="site" class="filter-select" onchange="this.form.submit()">
+      <option value="">All Sites</option>
+      {% for s in sites %}
+      <option value="{{ s }}" {% if site_filter == s %}selected{% endif %}>{{ s }}</option>
+      {% endfor %}
+    </select>
+    <select name="status" class="filter-select" onchange="this.form.submit()">
+      <option value="">All Statuses</option>
+      <option value="Open" {% if status_filter == 'Open' %}selected{% endif %}>Open</option>
+      <option value="Filled" {% if status_filter == 'Filled' %}selected{% endif %}>Filled</option>
+      <option value="Cancelled" {% if status_filter == 'Cancelled' %}selected{% endif %}>Cancelled</option>
+    </select>
+    <select name="priority" class="filter-select" onchange="this.form.submit()">
+      <option value="">All Priorities</option>
+      <option value="Normal" {% if priority_filter == 'Normal' %}selected{% endif %}>Normal</option>
+      <option value="Urgent" {% if priority_filter == 'Urgent' %}selected{% endif %}>Urgent</option>
+      <option value="Emergency" {% if priority_filter == 'Emergency' %}selected{% endif %}>Emergency</option>
+    </select>
+    {% if site_filter or status_filter or priority_filter %}
+    <a href="{{ url_for('operations.open_requests') }}" class="btn btn-secondary btn-sm">Clear</a>
+    {% endif %}
+  </form>
+</div>
+
+<div style="margin:8px 0;color:var(--text-light);font-size:13px;">{{ requests|length }} request{{ 's' if requests|length != 1 else '' }}</div>
+
+<!-- Requests Table -->
+<table class="data-table">
+  <thead>
+    <tr>
+      <th>Site</th>
+      <th>Date</th>
+      <th>Time</th>
+      <th>Hours</th>
+      <th>Reason</th>
+      <th>Priority</th>
+      <th>Status</th>
+      <th>Assigned</th>
+      <th>Actions</th>
+    </tr>
+  </thead>
+  <tbody>
+    {% for req in requests %}
+    <tr>
+      <td><strong>{{ req.site_name or '—' }}</strong></td>
+      <td>{{ req.date or '—' }}</td>
+      <td>{{ req.start_time or '?' }} - {{ req.end_time or '?' }}</td>
+      <td>{{ req.hours or '—' }}</td>
+      <td>{{ req.reason or '—' }}</td>
+      <td>
+        {% if req.priority == 'Emergency' %}
+        <span class="badge badge-danger">Emergency</span>
+        {% elif req.priority == 'Urgent' %}
+        <span class="badge badge-warning">Urgent</span>
+        {% else %}
+        <span class="badge badge-info">Normal</span>
+        {% endif %}
+      </td>
+      <td>
+        {% if req.status == 'Open' %}
+        <span class="badge badge-warning">Open</span>
+        {% elif req.status == 'Filled' %}
+        <span class="badge badge-success">Filled</span>
+        {% else %}
+        <span class="badge badge-danger">{{ req.status }}</span>
+        {% endif %}
+      </td>
+      <td>{{ req.assigned_officer or '—' }}</td>
+      <td style="white-space:nowrap;">
+        {% if req.status == 'Open' %}
+        <form method="post" action="{{ url_for('operations.open_requests_fill', request_id=req.request_id) }}" style="display:inline-flex;gap:4px;">
+          <select name="officer_name" class="filter-select" style="width:140px;font-size:12px;">
+            <option value="">Select officer</option>
+            {% for name in officer_names %}
+            <option value="{{ name }}">{{ name }}</option>
+            {% endfor %}
+          </select>
+          <button type="submit" class="btn btn-accent btn-sm">Fill</button>
+        </form>
+        {% endif %}
+        <form method="post" action="{{ url_for('operations.open_requests_delete', request_id=req.request_id) }}" style="display:inline;" onsubmit="return confirm('Delete this request?')">
+          <button type="submit" class="btn btn-danger btn-sm">Del</button>
+        </form>
+      </td>
+    </tr>
+    {% endfor %}
+    {% if not requests %}
+    <tr><td colspan="9" style="text-align:center;color:var(--text-light);padding:32px;">No requests found.</td></tr>
+    {% endif %}
+  </tbody>
+</table>
+
+<!-- Create Request Modal -->
+<div id="createRequestModal" class="modal-overlay" style="display:none;">
+  <div class="modal-card" style="max-width:520px;">
+    <h2 class="section-title">New Coverage Request</h2>
+    <form method="post" action="{{ url_for('operations.open_requests_create') }}">
+      <div style="display:grid;grid-template-columns:1fr 1fr;gap:12px;">
+        <div>
+          <label class="form-label">Site</label>
+          <select name="site_name" class="form-input" required>
+            <option value="">Select site</option>
+            {% for s in sites %}
+            <option value="{{ s }}">{{ s }}</option>
+            {% endfor %}
+          </select>
+        </div>
+        <div>
+          <label class="form-label">Date</label>
+          <input type="date" name="date" class="form-input" required>
+        </div>
+        <div>
+          <label class="form-label">Start Time</label>
+          <input type="time" name="start_time" class="form-input" required>
+        </div>
+        <div>
+          <label class="form-label">End Time</label>
+          <input type="time" name="end_time" class="form-input" required>
+        </div>
+        <div>
+          <label class="form-label">Reason</label>
+          <select name="reason" class="form-input">
+            <option>Coverage</option>
+            <option>Callout</option>
+            <option>PTO</option>
+            <option>Event</option>
+            <option>Other</option>
+          </select>
+        </div>
+        <div>
+          <label class="form-label">Priority</label>
+          <select name="priority" class="form-input">
+            <option>Normal</option>
+            <option>Urgent</option>
+            <option>Emergency</option>
+          </select>
+        </div>
+        <div>
+          <label class="form-label">Requested By</label>
+          <input type="text" name="requested_by" class="form-input">
+        </div>
+      </div>
+      <div style="margin-top:12px;">
+        <label class="form-label">Notes</label>
+        <textarea name="notes" class="form-input" rows="2"></textarea>
+      </div>
+      <div style="margin-top:16px;display:flex;gap:8px;justify-content:flex-end;">
+        <button type="button" class="btn btn-secondary" onclick="this.closest('.modal-overlay').style.display='none'">Cancel</button>
+        <button type="submit" class="btn btn-blue">Create Request</button>
+      </div>
+    </form>
+  </div>
+</div>
+{% endblock %}

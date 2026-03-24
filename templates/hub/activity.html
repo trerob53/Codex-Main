@@ -1,0 +1,93 @@
+{% extends "base.html" %}
+{% block title %}Recent Activity — Cerasus Hub{% endblock %}
+{% block content %}
+<div class="page-header">
+  <div>
+    <h1 class="page-title">Recent Activity</h1>
+    <p class="page-subtitle">System-wide event log</p>
+  </div>
+</div>
+
+<div class="card" style="padding:20px;">
+  <div class="filter-bar" style="margin-bottom:0; border:none; padding:0 0 16px;">
+    <div class="filter-search">
+      <span class="filter-search-icon">&#128269;</span>
+      <input type="text" placeholder="Search events..." oninput="filterTable(this.value, 'activity-table')">
+    </div>
+    <select class="filter-select">
+      <option value="">All Modules</option>
+      <option>hub</option>
+      <option>operations</option>
+      <option>uniforms</option>
+      <option>attendance</option>
+      <option>training</option>
+      <option>da_generator</option>
+    </select>
+  </div>
+
+  <div style="overflow-x:auto; max-height:600px; overflow-y:auto;">
+    <table class="data-table" id="activity-table">
+      <thead>
+        <tr><th>Time</th><th>User</th><th>Module</th><th>Action</th><th>Details</th></tr>
+      </thead>
+      <tbody>
+        {% for e in events %}
+        <tr>
+          <td style="white-space:nowrap; font-size:12px; color:var(--text-light);">{{ e.timestamp|friendly_time }}</td>
+          <td style="font-weight:600;">{{ e.username }}</td>
+          <td><span class="badge badge-info">{{ e.module_name or 'hub' }}</span></td>
+          <td>{{ e.action }}</td>
+          <td class="text-light" style="font-size:12px; max-width:400px; overflow:hidden; text-overflow:ellipsis; white-space:nowrap;">{{ e.details or '—' }}</td>
+        </tr>
+        {% else %}
+        <tr><td colspan="5" style="text-align:center; color:var(--text-light); padding:32px;">No recent activity</td></tr>
+        {% endfor %}
+      </tbody>
+    </table>
+  </div>
+</div>
+
+<div id="activity-pagination" style="display:flex; justify-content:space-between; align-items:center; margin-top:16px;">
+  <span id="activity-page-info" style="font-size:13px; color:var(--text-light);"></span>
+  <div style="display:flex; gap:8px;">
+    <button class="btn btn-sm btn-secondary" id="prev-page" onclick="changeActivityPage(-1)">&#8592; Prev</button>
+    <button class="btn btn-sm btn-secondary" id="next-page" onclick="changeActivityPage(1)">Next &#8594;</button>
+  </div>
+</div>
+
+<script>
+var actPage = 0, actSize = 25;
+function filterTable(query, tableId) {
+  var rows = document.getElementById(tableId).querySelectorAll('tbody tr');
+  query = query.toLowerCase();
+  rows.forEach(function(row) { row.dataset.hidden = row.textContent.toLowerCase().includes(query) ? '0' : '1'; });
+  actPage = 0; paginateActivity();
+}
+function paginateActivity() {
+  var rows = Array.from(document.getElementById('activity-table').querySelectorAll('tbody tr'));
+  var visible = rows.filter(function(r) { return r.dataset.hidden !== '1'; });
+  var totalPages = Math.max(1, Math.ceil(visible.length / actSize));
+  if (actPage >= totalPages) actPage = totalPages - 1;
+  var start = actPage * actSize, end = start + actSize;
+  rows.forEach(function(r) { r.style.display = 'none'; });
+  visible.forEach(function(r, i) { r.style.display = (i >= start && i < end) ? '' : 'none'; });
+  document.getElementById('activity-page-info').textContent = 'Showing ' + (start+1) + '-' + Math.min(end, visible.length) + ' of ' + visible.length;
+  document.getElementById('prev-page').disabled = actPage === 0;
+  document.getElementById('next-page').disabled = actPage >= totalPages - 1;
+}
+function changeActivityPage(dir) { actPage += dir; paginateActivity(); }
+paginateActivity();
+
+// Wire module filter
+document.querySelector('.filter-select').addEventListener('change', function() {
+  var mod = this.value;
+  var rows = document.getElementById('activity-table').querySelectorAll('tbody tr');
+  rows.forEach(function(row) {
+    if (!mod) { row.dataset.hidden = '0'; return; }
+    var badge = row.querySelector('.badge');
+    row.dataset.hidden = badge && badge.textContent.trim() === mod ? '0' : '1';
+  });
+  actPage = 0; paginateActivity();
+});
+</script>
+{% endblock %}

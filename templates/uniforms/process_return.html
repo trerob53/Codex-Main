@@ -1,0 +1,103 @@
+{% extends "base.html" %}
+{% block title %}Process Return — Uniforms — Cerasus Hub{% endblock %}
+
+{% block tabs %}
+<div class="module-tabs">
+  {% for section_title, section_items in sidebar_sections %}
+    {% for label, endpoint in section_items %}
+    <a href="{{ url_for(endpoint) }}" class="module-tab {{ 'active' if active_tab == label else '' }}">{{ label }}</a>
+    {% endfor %}
+  {% endfor %}
+</div>
+{% endblock %}
+
+{% block content %}
+<div class="page-header">
+  <div>
+    <h1 class="page-title">Process Return</h1>
+    <p class="page-subtitle">Return issued uniform items back to inventory</p>
+  </div>
+</div>
+
+<div class="card" style="padding:24px; max-width:700px; margin-bottom:24px;">
+  <form method="post" action="{{ url_for('uniforms.process_return') }}">
+    <!-- Issuance Select -->
+    <div style="margin-bottom:16px;">
+      <label class="form-label">Outstanding Issuance *</label>
+      <select name="issuance_id" class="form-input" required id="issuance-select">
+        <option value="">Select issuance to return...</option>
+        {% for iss in outstanding %}
+        <option value="{{ iss.issuance_id }}">
+          {{ iss.officer_name }} — {{ iss.item_name }} ({{ iss.size or 'N/A' }}) x{{ iss.quantity }} — Issued {{ iss.date_issued or '?' }}
+        </option>
+        {% endfor %}
+      </select>
+    </div>
+
+    <!-- Return Condition -->
+    <div style="margin-bottom:16px;">
+      <label class="form-label">Return Condition *</label>
+      <select name="return_condition" class="form-input" required>
+        <option>Good</option>
+        <option>Fair</option>
+        <option>Damaged</option>
+        <option>Lost</option>
+      </select>
+      <div style="font-size:12px; color:var(--text-light); margin-top:4px;">
+        Items marked "Lost" will not be returned to stock.
+      </div>
+    </div>
+
+    <!-- Notes -->
+    <div style="margin-bottom:16px;">
+      <label class="form-label">Return Notes</label>
+      <textarea name="return_notes" class="form-input" rows="3" placeholder="Optional notes about the return..."></textarea>
+    </div>
+
+    <div style="display:flex; gap:12px;">
+      <button type="submit" class="btn btn-blue">Process Return</button>
+      <a href="{{ url_for('uniforms.all_issuances') }}" class="btn btn-secondary">Cancel</a>
+    </div>
+  </form>
+</div>
+
+<!-- Outstanding Summary -->
+<div class="card" style="padding:20px;">
+  <h2 class="section-title" style="margin-bottom:12px;">Currently Outstanding ({{ outstanding|length }})</h2>
+  <div class="filter-bar" style="margin-bottom:12px;">
+    <div class="filter-search">
+      <span class="filter-search-icon">&#128269;</span>
+      <input type="text" placeholder="Search outstanding items..." oninput="filterTable(this.value, 'outstanding-table')">
+    </div>
+  </div>
+  <div style="overflow-x:auto;">
+    <table class="data-table" id="outstanding-table">
+      <thead><tr><th>Officer</th><th>Item</th><th>Size</th><th>Qty</th><th>Date Issued</th><th>Issued By</th></tr></thead>
+      <tbody>
+        {% for iss in outstanding %}
+        <tr>
+          <td style="font-weight:600;">{{ iss.officer_name }}</td>
+          <td>{{ iss.item_name }}</td>
+          <td>{{ iss.size or '—' }}</td>
+          <td>{{ iss.quantity }}</td>
+          <td style="font-size:13px;">{{ iss.date_issued or '—' }}</td>
+          <td style="font-size:13px;">{{ iss.issued_by or '—' }}</td>
+        </tr>
+        {% else %}
+        <tr><td colspan="6" style="text-align:center; color:var(--text-light); padding:32px;">No outstanding issuances</td></tr>
+        {% endfor %}
+      </tbody>
+    </table>
+  </div>
+</div>
+
+<script>
+function filterTable(query, tableId) {
+  var rows = document.getElementById(tableId).querySelectorAll('tbody tr');
+  query = query.toLowerCase();
+  rows.forEach(function(row) {
+    row.style.display = row.textContent.toLowerCase().includes(query) ? '' : 'none';
+  });
+}
+</script>
+{% endblock %}

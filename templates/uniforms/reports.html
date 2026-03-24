@@ -1,0 +1,71 @@
+{% extends "base.html" %}
+{% block title %}Reports — Uniforms — Cerasus Hub{% endblock %}
+
+{% block tabs %}
+<div class="module-tabs">
+  {% for section_title, section_items in sidebar_sections %}
+    {% for label, endpoint in section_items %}
+    <a href="{{ url_for(endpoint) }}" class="module-tab {{ 'active' if active_tab == label else '' }}">{{ label }}</a>
+    {% endfor %}
+  {% endfor %}
+</div>
+{% endblock %}
+
+{% block content %}
+<div class="page-header">
+  <div>
+    <h1 class="page-title">Reports &amp; Exports</h1>
+    <p class="page-subtitle">Download uniform data as CSV for external use</p>
+  </div>
+</div>
+
+<div style="display:grid; grid-template-columns:repeat(auto-fill, minmax(280px, 1fr)); gap:20px;">
+  <!-- Officers Export -->
+  <div class="card" style="padding:24px;">
+    <div style="font-size:28px; margin-bottom:8px;">&#128101;</div>
+    <h3 style="margin:0 0 8px 0; font-size:16px;">Officers Report</h3>
+    <p style="font-size:13px; color:var(--text-light); margin-bottom:16px;">
+      Export all officers with uniform sizes, site assignments, and employment status.
+    </p>
+    <a href="{{ url_for('uniforms.export_csv', collection='officers') }}" class="btn btn-blue btn-sm">
+      &#8595; Download CSV
+    </a>
+  </div>
+
+  <!-- Catalog Export -->
+  <div class="card" style="padding:24px;">
+    <div style="font-size:28px; margin-bottom:8px;">&#128230;</div>
+    <h3 style="margin:0 0 8px 0; font-size:16px;">Catalog / Inventory</h3>
+    <p style="font-size:13px; color:var(--text-light); margin-bottom:16px;">
+      Export the full uniform catalog with stock levels, costs, and lifecycle data.
+    </p>
+    <a href="{{ url_for('uniforms.export_csv', collection='catalog') }}" class="btn btn-blue btn-sm">
+      &#8595; Download CSV
+    </a>
+  </div>
+
+  <!-- Issuances Export -->
+  <div class="card" style="padding:24px;">
+    <div style="font-size:28px; margin-bottom:8px;">&#128196;</div>
+    <h3 style="margin:0 0 8px 0; font-size:16px;">Issuance History</h3>
+    <p style="font-size:13px; color:var(--text-light); margin-bottom:16px;">
+      Export all issuance records including returns, conditions, and dates.
+    </p>
+    <a href="{{ url_for('uniforms.export_csv', collection='issuances') }}" class="btn btn-blue btn-sm">
+      &#8595; Download CSV
+    </a>
+  </div>
+
+  <!-- Compliance Export -->
+  <div class="card" style="padding:24px;">
+    <div style="font-size:28px; margin-bottom:8px;">&#9989;</div>
+    <h3 style="margin:0 0 8px 0; font-size:16px;">Compliance Report</h3>
+    <p style="font-size:13px; color:var(--text-light); margin-bottom:16px;">
+      Export officer compliance data showing requirements met and missing items.
+    </p>
+    <a href="{{ url_for('uniforms.export_csv', collection='compliance') }}" class="btn btn-blue btn-sm">
+      &#8595; Download CSV
+    </a>
+  </div>
+</div>
+{% endblock %}

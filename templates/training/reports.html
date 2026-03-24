@@ -1,0 +1,207 @@
+{% extends "training/base_training.html" %}
+{% block title %}Reports — Training Portal{% endblock %}
+
+{% block content %}
+<div style="display:flex; justify-content:space-between; align-items:start; margin-bottom:24px;">
+  <div>
+    <h1 class="trn-page-title">Reports</h1>
+    <p class="trn-page-subtitle" style="margin-bottom:0;">Training completion and performance analytics</p>
+  </div>
+  <div style="display:flex; gap:8px;">
+    <button class="trn-btn trn-btn-secondary trn-btn-sm" onclick="exportTable('course-table', 'course_completions')">&#128196; Export Courses</button>
+    <button class="trn-btn trn-btn-secondary trn-btn-sm" onclick="exportTable('site-table', 'site_completions')">&#128196; Export Sites</button>
+    <button class="trn-btn trn-btn-secondary trn-btn-sm" onclick="exportTable('performers-table', 'top_performers')">&#128196; Export Performers</button>
+  </div>
+</div>
+
+<!-- Stats Summary -->
+<div class="trn-stats-grid" style="grid-template-columns:1fr 1fr 1fr;">
+  <div class="trn-stat-card">
+    <div class="trn-stat-card-icon">&#128218;</div>
+    <div class="trn-stat-card-value">{{ by_course|length }}</div>
+    <div class="trn-stat-card-label">Total Courses</div>
+  </div>
+  <div class="trn-stat-card">
+    <div class="trn-stat-card-icon">&#127959;</div>
+    <div class="trn-stat-card-value">{{ by_site|length }}</div>
+    <div class="trn-stat-card-label">Sites Active</div>
+  </div>
+  <div class="trn-stat-card">
+    <div class="trn-stat-card-icon">&#127942;</div>
+    <div class="trn-stat-card-value">{{ top_performers|length }}</div>
+    <div class="trn-stat-card-label">Top Performers</div>
+  </div>
+</div>
+
+<!-- Completion by Course -->
+<div class="trn-card" style="margin-bottom:24px;">
+  <div class="trn-section-header">
+    <div class="trn-section-title">Completion by Course</div>
+  </div>
+  {% if by_course %}
+  <div style="overflow-x:auto;">
+    <table class="trn-table" id="course-table">
+      <thead>
+        <tr>
+          <th>Course</th>
+          <th>Category</th>
+          <th>Enrolled</th>
+          <th>Completed</th>
+          <th>Avg Score</th>
+          <th>Completion Rate</th>
+        </tr>
+      </thead>
+      <tbody>
+        {% for c in by_course %}
+        <tr>
+          <td style="font-weight:600;">{{ c.title or c.course_id }}</td>
+          <td><span class="trn-badge">{{ c.category or 'General' }}</span></td>
+          <td>{{ c.enrolled|default(0) }}</td>
+          <td>{{ c.completed|default(0) }}</td>
+          <td>
+            {% if c.avg_score %}
+            <span class="trn-badge" style="{% if c.avg_score >= 90 %}background:rgba(34,197,94,0.15); color:var(--trn-green);{% elif c.avg_score >= 70 %}background:rgba(59,130,246,0.15); color:var(--trn-blue);{% else %}background:rgba(249,115,22,0.15); color:var(--trn-orange);{% endif %}">{{ c.avg_score|round(1) }}%</span>
+            {% else %}
+            <span style="color:var(--trn-text-muted);">--</span>
+            {% endif %}
+          </td>
+          <td>
+            {% set rate = ((c.completed|default(0)) / (c.enrolled if c.enrolled else 1) * 100)|round|int %}
+            <div style="display:flex; align-items:center; gap:8px;">
+              <div class="trn-progress-bar" style="flex:1; max-width:120px;">
+                <div class="trn-progress-bar-fill {{ 'green' if rate >= 80 else 'blue' if rate >= 50 else 'red' }}" style="width:{{ rate }}%;"></div>
+              </div>
+              <span style="font-size:12px; color:var(--trn-text-secondary);">{{ rate }}%</span>
+            </div>
+          </td>
+        </tr>
+        {% endfor %}
+      </tbody>
+    </table>
+  </div>
+  {% else %}
+  <div style="text-align:center; padding:24px; color:var(--trn-text-muted);">No course data available.</div>
+  {% endif %}
+</div>
+
+<!-- Completion by Site -->
+<div class="trn-card" style="margin-bottom:24px;">
+  <div class="trn-section-header">
+    <div class="trn-section-title">Completion by Site</div>
+  </div>
+  {% if by_site %}
+  <div style="overflow-x:auto;">
+    <table class="trn-table" id="site-table">
+      <thead>
+        <tr>
+          <th>Site</th>
+          <th>Officers</th>
+          <th>Courses Completed</th>
+          <th>Certificates</th>
+          <th>Avg Score</th>
+        </tr>
+      </thead>
+      <tbody>
+        {% for s in by_site %}
+        <tr>
+          <td>
+            <span class="trn-site-pill">{{ s.site or 'Unassigned' }}</span>
+          </td>
+          <td>{{ s.officer_count|default(s.officers|default(0)) }}</td>
+          <td>{{ s.courses_completed|default(0) }}</td>
+          <td>{{ s.certificates|default(0) }}</td>
+          <td>
+            {% if s.avg_score or s.avg_completion %}
+            {% set score = s.avg_score|default(s.avg_completion|default(0)) %}
+            {{ score|round(1) }}%
+            {% else %}
+            <span style="color:var(--trn-text-muted);">--</span>
+            {% endif %}
+          </td>
+        </tr>
+        {% endfor %}
+      </tbody>
+    </table>
+  </div>
+  {% else %}
+  <div style="text-align:center; padding:24px; color:var(--trn-text-muted);">No site data available.</div>
+  {% endif %}
+</div>
+
+<!-- Top Performers -->
+<div class="trn-card">
+  <div class="trn-section-header">
+    <div class="trn-section-title">Top Performers</div>
+  </div>
+  {% if top_performers %}
+  <div style="overflow-x:auto;">
+    <table class="trn-table" id="performers-table">
+      <thead>
+        <tr>
+          <th>Rank</th>
+          <th>Officer</th>
+          <th>Site</th>
+          <th>Points</th>
+          <th>Courses</th>
+          <th>Avg Score</th>
+        </tr>
+      </thead>
+      <tbody>
+        {% for p in top_performers %}
+        {% set initials = (p.name.split()[0][:1] + (p.name.split()[-1][:1] if p.name.split()|length > 1 else ''))|upper %}
+        <tr>
+          <td>
+            {% if loop.index <= 3 %}
+            <span class="trn-rank-badge {{ ['gold','silver','bronze'][loop.index - 1] }}">{{ loop.index }}</span>
+            {% else %}
+            <span style="font-weight:600; color:var(--trn-text-muted);">{{ loop.index }}</span>
+            {% endif %}
+          </td>
+          <td>
+            <div style="display:flex; align-items:center; gap:10px;">
+              <div class="trn-avatar trn-avatar-sm">{{ initials }}</div>
+              <span style="font-weight:600;">{{ p.name }}</span>
+            </div>
+          </td>
+          <td><span class="trn-site-pill">{{ p.site or 'Unassigned' }}</span></td>
+          <td style="font-weight:700; color:var(--trn-green);">{{ p.points or 0 }}</td>
+          <td>{{ p.courses_completed|default(0) }}</td>
+          <td>
+            {% if p.avg_score and p.avg_score > 0 %}
+            {{ p.avg_score|round(1) }}%
+            {% else %}
+            --
+            {% endif %}
+          </td>
+        </tr>
+        {% endfor %}
+      </tbody>
+    </table>
+  </div>
+  {% else %}
+  <div style="text-align:center; padding:24px; color:var(--trn-text-muted);">No performer data available.</div>
+  {% endif %}
+</div>
+
+<script>
+function exportTable(tableId, filename) {
+  var table = document.getElementById(tableId);
+  if (!table) return;
+  var csv = [];
+  var rows = table.querySelectorAll('tr');
+  rows.forEach(function(row) {
+    var cols = row.querySelectorAll('th, td');
+    var rowData = [];
+    cols.forEach(function(col) {
+      rowData.push('"' + col.textContent.trim().replace(/"/g, '""') + '"');
+    });
+    csv.push(rowData.join(','));
+  });
+  var blob = new Blob([csv.join('\n')], { type: 'text/csv' });
+  var a = document.createElement('a');
+  a.href = URL.createObjectURL(blob);
+  a.download = filename + '.csv';
+  a.click();
+}
+</script>
+{% endblock %}

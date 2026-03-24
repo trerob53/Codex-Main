@@ -1,0 +1,179 @@
+{% extends "base.html" %}
+{% block title %}Employment Reviews — Attendance — Cerasus Hub{% endblock %}
+
+{% block tabs %}
+<div class="module-tabs">
+  <a href="{{ url_for('attendance.dashboard') }}" class="module-tab {{ 'active' if active_tab == 'dashboard' }}">Dashboard</a>
+  <a href="{{ url_for('attendance.roster') }}" class="module-tab {{ 'active' if active_tab == 'roster' }}">Roster</a>
+  <a href="{{ url_for('attendance.sites') }}" class="module-tab {{ 'active' if active_tab == 'sites' }}">Sites</a>
+  <a href="{{ url_for('attendance.log_infraction') }}" class="module-tab {{ 'active' if active_tab == 'log' }}">Log Infraction</a>
+  <a href="{{ url_for('attendance.discipline') }}" class="module-tab {{ 'active' if active_tab == 'discipline' }}">Discipline</a>
+  <a href="{{ url_for('attendance.reviews') }}" class="module-tab {{ 'active' if active_tab == 'reviews' }}">Reviews</a>
+  <a href="{{ url_for('attendance.reports') }}" class="module-tab {{ 'active' if active_tab == 'reports' }}">Reports</a>
+  <a href="{{ url_for('attendance.analytics') }}" class="module-tab {{ 'active' if active_tab == 'analytics' }}">Analytics</a>
+</div>
+{% endblock %}
+
+{% block content %}
+<div class="page-header">
+  <div>
+    <h1 class="page-title">Employment Reviews</h1>
+    <p class="page-subtitle">Track employment reviews triggered by discipline thresholds</p>
+  </div>
+  <div>
+    <button class="btn btn-blue" onclick="document.getElementById('createModal').style.display='flex'">+ New Review</button>
+  </div>
+</div>
+
+<div class="card" style="margin-top:16px;">
+  <table class="data-table">
+    <thead>
+      <tr>
+        <th>ID</th>
+        <th>Officer</th>
+        <th>Triggered Date</th>
+        <th>Points at Trigger</th>
+        <th>Status</th>
+        <th>Reviewed By</th>
+        <th>Review Date</th>
+        <th>Outcome</th>
+        <th>Actions</th>
+      </tr>
+    </thead>
+    <tbody>
+      {% for rev in reviews %}
+      <tr>
+        <td>#{{ rev.id }}</td>
+        <td style="font-weight:600;">
+          {{ officer_map.get(rev.employee_id, rev.employee_id) }}
+          <div style="font-size:11px; color:var(--text-light);">{{ rev.employee_id }}</div>
+        </td>
+        <td>{{ rev.triggered_date }}</td>
+        <td>{{ rev.points_at_trigger }}</td>
+        <td>
+          {% if rev.review_status == 'Pending' %}
+            <span class="badge badge-warning">Pending</span>
+          {% elif rev.review_status == 'Completed' %}
+            <span class="badge badge-success">Completed</span>
+          {% elif rev.review_status == 'Scheduled' %}
+            <span class="badge badge-info">Scheduled</span>
+          {% else %}
+            <span class="badge badge-info">{{ rev.review_status }}</span>
+          {% endif %}
+        </td>
+        <td>{{ rev.reviewed_by or '—' }}</td>
+        <td>{{ rev.review_date or '—' }}</td>
+        <td>{{ rev.outcome or '—' }}</td>
+        <td>
+          {% if not rev.locked %}
+          <button class="btn btn-secondary btn-sm" onclick="openUpdateModal({{ rev.id }}, '{{ rev.review_status }}', '{{ rev.reviewed_by or '' }}', '{{ rev.review_date or '' }}', '{{ rev.outcome or '' }}', '{{ (rev.reviewer_notes or '')|replace("'", "\\'") }}')">Update</button>
+          {% else %}
+          <span class="badge badge-info">Locked</span>
+          {% endif %}
+        </td>
+      </tr>
+      {% else %}
+      <tr>
+        <td colspan="9" style="text-align:center; color:var(--text-light); padding:24px;">No employment reviews found.</td>
+      </tr>
+      {% endfor %}
+    </tbody>
+  </table>
+</div>
+
+<div style="margin-top:12px; font-size:13px; color:var(--text-light);">
+  Showing {{ reviews|length }} review{{ 's' if reviews|length != 1 }}
+</div>
+
+<!-- Create Review Modal -->
+<div id="createModal" class="modal-overlay" style="display:none;">
+  <div class="modal-card" style="max-width:480px;">
+    <h3 style="margin:0 0 16px;">Create Employment Review</h3>
+    <form method="POST" action="{{ url_for('attendance.reviews') }}">
+      <input type="hidden" name="_action" value="create">
+      <div style="margin-bottom:12px;">
+        <label class="form-label">Officer</label>
+        <select name="employee_id" class="form-input" required>
+          <option value="">Select officer...</option>
+          {% for off in officers %}
+          <option value="{{ off.employee_id or off.officer_id }}">{{ off.name }} ({{ off.employee_id or off.officer_id }})</option>
+          {% endfor %}
+        </select>
+      </div>
+      <div style="margin-bottom:12px;">
+        <label class="form-label">Triggered Date</label>
+        <input type="date" name="triggered_date" class="form-input" required>
+      </div>
+      <div style="margin-bottom:16px;">
+        <label class="form-label">Points at Trigger</label>
+        <input type="number" name="points_at_trigger" class="form-input" step="0.5" min="0" value="0">
+      </div>
+      <div style="display:flex; gap:12px; justify-content:flex-end;">
+        <button type="button" class="btn btn-secondary" onclick="document.getElementById('createModal').style.display='none'">Cancel</button>
+        <button type="submit" class="btn btn-blue">Create Review</button>
+      </div>
+    </form>
+  </div>
+</div>
+
+<!-- Update Review Modal -->
+<div id="updateModal" class="modal-overlay" style="display:none;">
+  <div class="modal-card" style="max-width:520px;">
+    <h3 style="margin:0 0 16px;">Update Review</h3>
+    <form method="POST" action="{{ url_for('attendance.reviews') }}">
+      <input type="hidden" name="_action" value="update">
+      <input type="hidden" name="review_id" id="upd_review_id">
+      <div style="margin-bottom:12px;">
+        <label class="form-label">Status</label>
+        <select name="review_status" id="upd_status" class="form-input">
+          <option value="Pending">Pending</option>
+          <option value="Scheduled">Scheduled</option>
+          <option value="Completed">Completed</option>
+        </select>
+      </div>
+      <div style="margin-bottom:12px;">
+        <label class="form-label">Reviewed By</label>
+        <input type="text" name="reviewed_by" id="upd_reviewed_by" class="form-input" placeholder="Reviewer name">
+      </div>
+      <div style="margin-bottom:12px;">
+        <label class="form-label">Review Date</label>
+        <input type="date" name="review_date" id="upd_review_date" class="form-input">
+      </div>
+      <div style="margin-bottom:12px;">
+        <label class="form-label">Outcome</label>
+        <select name="outcome" id="upd_outcome" class="form-input">
+          <option value="">Select outcome...</option>
+          <option value="Retained">Retained</option>
+          <option value="Probation">Probation</option>
+          <option value="Final Warning">Final Warning</option>
+          <option value="Terminated">Terminated</option>
+          <option value="Resigned">Resigned</option>
+        </select>
+      </div>
+      <div style="margin-bottom:16px;">
+        <label class="form-label">Reviewer Notes</label>
+        <textarea name="reviewer_notes" id="upd_notes" class="form-input" rows="3"></textarea>
+      </div>
+      <div style="display:flex; gap:12px; justify-content:flex-end;">
+        <button type="button" class="btn btn-secondary" onclick="document.getElementById('updateModal').style.display='none'">Cancel</button>
+        <button type="submit" class="btn btn-blue">Save</button>
+      </div>
+    </form>
+  </div>
+</div>
+
+<script>
+function openUpdateModal(id, status, reviewedBy, reviewDate, outcome, notes) {
+  document.getElementById('upd_review_id').value = id;
+  document.getElementById('upd_status').value = status;
+  document.getElementById('upd_reviewed_by').value = reviewedBy;
+  document.getElementById('upd_review_date').value = reviewDate;
+  document.getElementById('upd_outcome').value = outcome;
+  document.getElementById('upd_notes').value = notes;
+  document.getElementById('updateModal').style.display = 'flex';
+}
+document.querySelectorAll('.modal-overlay').forEach(function(m) {
+  m.addEventListener('click', function(e) { if (e.target === this) this.style.display = 'none'; });
+});
+</script>
+{% endblock %}

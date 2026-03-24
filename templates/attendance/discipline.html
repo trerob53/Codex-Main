@@ -1,0 +1,173 @@
+{% extends "base.html" %}
+{% block title %}Discipline Tracker — Attendance — Cerasus Hub{% endblock %}
+
+{% block tabs %}
+<div class="module-tabs">
+  <a href="{{ url_for('attendance.dashboard') }}" class="module-tab {{ 'active' if active_tab == 'dashboard' }}">Dashboard</a>
+  <a href="{{ url_for('attendance.roster') }}" class="module-tab {{ 'active' if active_tab == 'roster' }}">Roster</a>
+  <a href="{{ url_for('attendance.sites') }}" class="module-tab {{ 'active' if active_tab == 'sites' }}">Sites</a>
+  <a href="{{ url_for('attendance.log_infraction') }}" class="module-tab {{ 'active' if active_tab == 'log' }}">Log Infraction</a>
+  <a href="{{ url_for('attendance.discipline') }}" class="module-tab {{ 'active' if active_tab == 'discipline' }}">Discipline</a>
+  <a href="{{ url_for('attendance.reviews') }}" class="module-tab {{ 'active' if active_tab == 'reviews' }}">Reviews</a>
+  <a href="{{ url_for('attendance.reports') }}" class="module-tab {{ 'active' if active_tab == 'reports' }}">Reports</a>
+  <a href="{{ url_for('attendance.analytics') }}" class="module-tab {{ 'active' if active_tab == 'analytics' }}">Analytics</a>
+</div>
+{% endblock %}
+
+{% block content %}
+<div class="page-header">
+  <div>
+    <h1 class="page-title">Discipline Tracker</h1>
+    <p class="page-subtitle">All recorded attendance infractions</p>
+  </div>
+  <div>
+    <a href="{{ url_for('attendance.log_infraction') }}" class="btn btn-blue">+ Log Infraction</a>
+  </div>
+</div>
+
+<!-- Filter Bar -->
+<div class="filter-bar">
+  <form method="GET" action="{{ url_for('attendance.discipline') }}" style="display:flex; gap:12px; align-items:center; flex-wrap:wrap; width:100%;">
+    <input type="text" name="q" value="{{ q }}" placeholder="Search officer ID, notes..." class="filter-search form-input" style="max-width:220px;">
+    <select name="site" class="filter-select form-input">
+      <option value="">All Sites</option>
+      {% for s in sites %}
+      <option value="{{ s }}" {{ 'selected' if site_filter == s }}>{{ s }}</option>
+      {% endfor %}
+    </select>
+    <select name="type" class="filter-select form-input">
+      <option value="">All Types</option>
+      {% for key, info in infraction_types.items() %}
+      <option value="{{ key }}" {{ 'selected' if type_filter == key }}>{{ info.label }}</option>
+      {% endfor %}
+    </select>
+    <input type="date" name="date_from" value="{{ date_from }}" class="form-input" style="max-width:160px;" placeholder="From">
+    <input type="date" name="date_to" value="{{ date_to }}" class="form-input" style="max-width:160px;" placeholder="To">
+    <button type="submit" class="btn btn-blue btn-sm">Filter</button>
+    {% if q or site_filter or type_filter or date_from or date_to %}
+    <a href="{{ url_for('attendance.discipline') }}" class="btn btn-secondary btn-sm">Clear</a>
+    {% endif %}
+  </form>
+</div>
+
+<div class="card" style="margin-top:16px;">
+  <table class="data-table">
+    <thead>
+      <tr>
+        <th>ID</th>
+        <th>Officer</th>
+        <th>Site</th>
+        <th>Type</th>
+        <th>Points</th>
+        <th>Date</th>
+        <th>Status</th>
+        <th>Actions</th>
+      </tr>
+    </thead>
+    <tbody>
+      {% for inf in infractions %}
+      <tr>
+        <td>#{{ inf.id }}</td>
+        <td style="font-weight:600;">{{ (inf.officer_name or inf.employee_id)|officer_link(inf.employee_id) }}</td>
+        <td>{{ inf.site }}</td>
+        <td>
+          {% set type_info = infraction_types.get(inf.infraction_type, {}) %}
+          {{ type_info.get('label', inf.infraction_type|replace("_", " ")|title) }}
+        </td>
+        <td>
+          <span style="font-weight:600; color:{% if inf.points_assigned >= 6 %}#DC2626{% elif inf.points_assigned >= 3 %}#D97706{% else %}#059669{% endif %};">
+            {{ inf.points_assigned }}
+          </span>
+        </td>
+        <td>{{ inf.infraction_date }}</td>
+        <td>
+          {% if inf.points_active %}
+            <span class="badge badge-warning">Active</span>
+          {% else %}
+            <span class="badge badge-success">Expired</span>
+          {% endif %}
+          {% if inf.edited %}
+            <span class="badge badge-info">Edited</span>
+          {% endif %}
+        </td>
+        <td style="white-space:nowrap;">
+          <button class="btn btn-secondary btn-sm" onclick="openEditModal({{ inf.id }}, '{{ inf.infraction_type }}', '{{ inf.infraction_date }}', {{ inf.points_assigned }}, '{{ inf.site }}', '{{ inf.description|replace("'", "\\'") }}')">Edit</button>
+          <a href="{{ url_for('attendance.officer_da_options', employee_id=inf.employee_id) }}" class="btn btn-sm" style="background:#B91C1C;color:white;text-decoration:none;" title="Create Attendance DA">DA</a>
+          <form method="POST" action="{{ url_for('attendance.delete_infraction', infraction_id=inf.id) }}" style="display:inline;" onsubmit="return confirm('Delete this infraction?');">
+            <button type="submit" class="btn btn-danger btn-sm">Delete</button>
+          </form>
+        </td>
+      </tr>
+      {% else %}
+      <tr>
+        <td colspan="8" style="text-align:center; color:var(--text-light); padding:24px;">No infractions found.</td>
+      </tr>
+      {% endfor %}
+    </tbody>
+  </table>
+</div>
+
+<div style="margin-top:12px; font-size:13px; color:var(--text-light);">
+  Showing {{ infractions|length }} infraction{{ 's' if infractions|length != 1 }}
+</div>
+
+<!-- Edit Modal -->
+<div id="editModal" class="modal-overlay" style="display:none;">
+  <div class="modal-card" style="max-width:520px;">
+    <h3 style="margin:0 0 16px;">Edit Infraction</h3>
+    <form id="editForm" method="POST">
+      <div style="margin-bottom:12px;">
+        <label class="form-label">Infraction Type</label>
+        <select name="infraction_type" id="edit_type" class="form-input">
+          {% for key, info in infraction_types.items() %}
+          <option value="{{ key }}">{{ info.label }}</option>
+          {% endfor %}
+        </select>
+      </div>
+      <div style="margin-bottom:12px;">
+        <label class="form-label">Date</label>
+        <input type="date" name="infraction_date" id="edit_date" class="form-input">
+      </div>
+      <div style="margin-bottom:12px;">
+        <label class="form-label">Points</label>
+        <input type="number" name="points_assigned" id="edit_points" class="form-input" step="0.5" min="0">
+      </div>
+      <div style="margin-bottom:12px;">
+        <label class="form-label">Site</label>
+        <select name="site" id="edit_site" class="form-input">
+          <option value="">Select site...</option>
+          {% for s in sites %}
+          <option value="{{ s }}">{{ s }}</option>
+          {% endfor %}
+        </select>
+      </div>
+      <div style="margin-bottom:16px;">
+        <label class="form-label">Description</label>
+        <textarea name="description" id="edit_desc" class="form-input" rows="2"></textarea>
+      </div>
+      <div style="display:flex; gap:12px; justify-content:flex-end;">
+        <button type="button" class="btn btn-secondary" onclick="closeEditModal()">Cancel</button>
+        <button type="submit" class="btn btn-blue">Save Changes</button>
+      </div>
+    </form>
+  </div>
+</div>
+
+<script>
+function openEditModal(id, type, date, points, site, desc) {
+  document.getElementById('editForm').action = '/module/attendance/discipline/edit/' + id;
+  document.getElementById('edit_type').value = type;
+  document.getElementById('edit_date').value = date;
+  document.getElementById('edit_points').value = points;
+  document.getElementById('edit_site').value = site;
+  document.getElementById('edit_desc').value = desc;
+  document.getElementById('editModal').style.display = 'flex';
+}
+function closeEditModal() {
+  document.getElementById('editModal').style.display = 'none';
+}
+document.getElementById('editModal').addEventListener('click', function(e) {
+  if (e.target === this) closeEditModal();
+});
+</script>
+{% endblock %}

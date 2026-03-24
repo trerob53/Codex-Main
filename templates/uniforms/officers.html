@@ -1,0 +1,115 @@
+{% extends "base.html" %}
+{% block title %}Officers — Uniforms — Cerasus Hub{% endblock %}
+
+{% block tabs %}
+<div class="module-tabs">
+  {% for section_title, section_items in sidebar_sections %}
+    {% for label, endpoint in section_items %}
+    <a href="{{ url_for(endpoint) }}" class="module-tab {{ 'active' if active_tab == label else '' }}">{{ label }}</a>
+    {% endfor %}
+  {% endfor %}
+</div>
+{% endblock %}
+
+{% block content %}
+<div class="page-header">
+  <div>
+    <h1 class="page-title">Officers</h1>
+    <p class="page-subtitle">All officers and their uniform sizing information</p>
+  </div>
+</div>
+
+<div class="card" style="padding:20px;">
+  <div class="filter-bar" style="margin-bottom:16px;">
+    <div class="filter-search">
+      <span class="filter-search-icon">&#128269;</span>
+      <input type="text" placeholder="Search officers..." id="officer-search"
+             oninput="filterTable(this.value, 'officers-table')">
+    </div>
+    <select class="filter-select" id="status-filter" onchange="filterByStatus()">
+      <option value="">All Statuses</option>
+      <option>Active</option>
+      <option>Inactive</option>
+      <option>Terminated</option>
+    </select>
+    <select class="filter-select" id="site-filter" onchange="filterBySite()">
+      <option value="">All Sites</option>
+      {% set all_sites = officers|map(attribute='site')|select('string')|unique|sort %}
+      {% for s in all_sites %}
+      {% if s %}<option>{{ s }}</option>{% endif %}
+      {% endfor %}
+    </select>
+  </div>
+
+  <div style="overflow-x:auto;">
+    <table class="data-table" id="officers-table">
+      <thead>
+        <tr>
+          <th>Name</th>
+          <th>Employee ID</th>
+          <th>Site</th>
+          <th>Job Title</th>
+          <th>Status</th>
+          <th>Shirt</th>
+          <th>Pants</th>
+          <th>Jacket</th>
+          <th>Shoes</th>
+        </tr>
+      </thead>
+      <tbody>
+        {% for o in officers %}
+        {% set initials = (o.name.split()[0][:1] + (o.name.split()[-1][:1] if o.name.split()|length > 1 else ''))|upper %}
+        {% set colors = ['#3B82F6','#8B5CF6','#059669','#D97706','#C8102E','#6366F1','#0891B2'] %}
+        {% set avatar_color = colors[loop.index0 % colors|length] %}
+        {% set sizes = o.uniform_sizes if o.uniform_sizes is mapping else {} %}
+        <tr data-status="{{ o.status or 'Active' }}" data-site="{{ o.site or '' }}">
+          <td>
+            <div style="display:flex; align-items:center; gap:10px;">
+              <div class="avatar" style="background:{{ avatar_color }};">{{ initials }}</div>
+              <div>
+                <div style="font-weight:600; color:var(--blue);">{{ o.name }}</div>
+                <div style="font-size:11px; color:var(--text-light);">{{ o.email or '' }}</div>
+              </div>
+            </div>
+          </td>
+          <td class="font-mono" style="font-size:13px;">{{ o.employee_id or '—' }}</td>
+          <td>{{ o.site or '—' }}</td>
+          <td>{{ o.job_title or '—' }}</td>
+          <td>
+            {% set status = o.status or 'Active' %}
+            <span class="badge badge-{{ 'success' if status == 'Active' else 'danger' }}">{{ status }}</span>
+          </td>
+          <td style="font-size:13px;">{{ sizes.get('shirt', '—') or '—' }}</td>
+          <td style="font-size:13px;">{{ sizes.get('pants', '—') or '—' }}</td>
+          <td style="font-size:13px;">{{ sizes.get('jacket', '—') or '—' }}</td>
+          <td style="font-size:13px;">{{ sizes.get('shoes', '—') or '—' }}</td>
+        </tr>
+        {% else %}
+        <tr><td colspan="9" style="text-align:center; color:var(--text-light); padding:32px;">No officers found</td></tr>
+        {% endfor %}
+      </tbody>
+    </table>
+  </div>
+  <div style="margin-top:12px; font-size:13px; color:var(--text-light);">
+    Showing {{ officers|length }} officer{{ 's' if officers|length != 1 else '' }}
+  </div>
+</div>
+
+<script>
+function filterTable(query, tableId) {
+  var rows = document.getElementById(tableId).querySelectorAll('tbody tr');
+  query = query.toLowerCase();
+  rows.forEach(function(row) {
+    var text = row.textContent.toLowerCase();
+    var statusMatch = true, siteMatch = true;
+    var sf = document.getElementById('status-filter').value;
+    var sif = document.getElementById('site-filter').value;
+    if (sf) statusMatch = row.dataset.status === sf;
+    if (sif) siteMatch = row.dataset.site === sif;
+    row.style.display = text.includes(query) && statusMatch && siteMatch ? '' : 'none';
+  });
+}
+function filterByStatus() { filterTable(document.getElementById('officer-search').value, 'officers-table'); }
+function filterBySite() { filterTable(document.getElementById('officer-search').value, 'officers-table'); }
+</script>
+{% endblock %}

@@ -1,0 +1,197 @@
+{% extends "operations/_layout.html" %}
+{% block page_title %}PTO & Coverage{% endblock %}
+{% block breadcrumb_tail %}
+<span class="sep">&#8250;</span><span class="current">PTO &amp; Coverage</span>
+{% endblock %}
+
+{% block page_content %}
+<div class="page-header">
+  <div>
+    <h1 class="page-title">PTO &amp; Coverage</h1>
+    <p class="page-subtitle">Officer time-off entries and availability tracking</p>
+  </div>
+  <button class="btn btn-blue" onclick="document.getElementById('createPtoModal').style.display='flex'">+ New PTO</button>
+</div>
+
+<div style="margin:8px 0;color:var(--text-light);font-size:13px;">{{ entries|length }} PTO entr{{ 'ies' if entries|length != 1 else 'y' }}</div>
+
+<!-- PTO Table -->
+<table class="data-table">
+  <thead>
+    <tr>
+      <th>Officer</th>
+      <th>Start Date</th>
+      <th>End Date</th>
+      <th>Type</th>
+      <th>Status</th>
+      <th>Notes</th>
+      <th>Actions</th>
+    </tr>
+  </thead>
+  <tbody>
+    {% for e in entries %}
+    <tr>
+      <td><strong>{{ e.officer_name|officer_link if e.officer_name else '—' }}</strong></td>
+      <td>{{ e.start_date or '—' }}</td>
+      <td>{{ e.end_date or '—' }}</td>
+      <td>{{ e.pto_type or '—' }}</td>
+      <td>
+        {% if e.status == 'Approved' %}
+        <span class="badge badge-success">Approved</span>
+        {% elif e.status == 'Pending' %}
+        <span class="badge badge-warning">Pending</span>
+        {% elif e.status == 'Denied' %}
+        <span class="badge badge-danger">Denied</span>
+        {% else %}
+        <span class="badge badge-info">{{ e.status }}</span>
+        {% endif %}
+      </td>
+      <td style="max-width:200px;overflow:hidden;text-overflow:ellipsis;">{{ e.notes or '—' }}</td>
+      <td style="white-space:nowrap;">
+        <button class="btn btn-secondary btn-sm" onclick="openEditPto('{{ e.pto_id }}', '{{ e.officer_name }}', '{{ e.start_date }}', '{{ e.end_date }}', '{{ e.pto_type }}', '{{ e.status }}', '{{ e.notes|replace("'", "\\'") }}')">Edit</button>
+        <form method="post" action="{{ url_for('operations.pto_delete', pto_id=e.pto_id) }}" style="display:inline;" onsubmit="return confirm('Delete this PTO entry?')">
+          <button type="submit" class="btn btn-danger btn-sm">Del</button>
+        </form>
+      </td>
+    </tr>
+    {% endfor %}
+    {% if not entries %}
+    <tr><td colspan="7" style="text-align:center;color:var(--text-light);padding:32px;">No PTO entries found.</td></tr>
+    {% endif %}
+  </tbody>
+</table>
+
+<!-- Create PTO Modal -->
+<div id="createPtoModal" class="modal-overlay" style="display:none;">
+  <div class="modal-card" style="max-width:480px;">
+    <h2 class="section-title">New PTO Entry</h2>
+    <form method="post" action="{{ url_for('operations.pto_create') }}">
+      <div style="display:grid;grid-template-columns:1fr 1fr;gap:12px;">
+        <div style="grid-column:span 2;">
+          <label class="form-label">Officer</label>
+          <select name="officer_name" class="form-input" required>
+            <option value="">Select officer</option>
+            {% for name in officer_names %}
+            <option value="{{ name }}">{{ name }}</option>
+            {% endfor %}
+          </select>
+        </div>
+        <div>
+          <label class="form-label">Start Date</label>
+          <input type="date" name="start_date" class="form-input" required>
+        </div>
+        <div>
+          <label class="form-label">End Date</label>
+          <input type="date" name="end_date" class="form-input" required>
+        </div>
+        <div>
+          <label class="form-label">Type</label>
+          <select name="pto_type" class="form-input">
+            <option>Unavailable</option>
+            <option>Vacation</option>
+            <option>Sick</option>
+            <option>Personal</option>
+            <option>FMLA</option>
+            <option>Other</option>
+          </select>
+        </div>
+        <div>
+          <label class="form-label">Status</label>
+          <select name="status" class="form-input">
+            <option>Approved</option>
+            <option>Pending</option>
+            <option>Denied</option>
+          </select>
+        </div>
+      </div>
+      <div style="margin-top:12px;">
+        <label class="form-label">Notes</label>
+        <textarea name="notes" class="form-input" rows="2"></textarea>
+      </div>
+      <div style="margin-top:16px;display:flex;gap:8px;justify-content:flex-end;">
+        <button type="button" class="btn btn-secondary" onclick="this.closest('.modal-overlay').style.display='none'">Cancel</button>
+        <button type="submit" class="btn btn-blue">Create PTO</button>
+      </div>
+    </form>
+  </div>
+</div>
+
+<!-- Edit PTO Modal -->
+<div id="editPtoModal" class="modal-overlay" style="display:none;">
+  <div class="modal-card" style="max-width:480px;">
+    <h2 class="section-title">Edit PTO Entry</h2>
+    <form method="post" id="editPtoForm">
+      <div style="display:grid;grid-template-columns:1fr 1fr;gap:12px;">
+        <div style="grid-column:span 2;">
+          <label class="form-label">Officer</label>
+          <select name="officer_name" id="editPtoOfficer" class="form-input" required>
+            <option value="">Select officer</option>
+            {% for name in officer_names %}
+            <option value="{{ name }}">{{ name }}</option>
+            {% endfor %}
+          </select>
+        </div>
+        <div>
+          <label class="form-label">Start Date</label>
+          <input type="date" name="start_date" id="editPtoStart" class="form-input" required>
+        </div>
+        <div>
+          <label class="form-label">End Date</label>
+          <input type="date" name="end_date" id="editPtoEnd" class="form-input" required>
+        </div>
+        <div>
+          <label class="form-label">Type</label>
+          <select name="pto_type" id="editPtoType" class="form-input">
+            <option>Unavailable</option>
+            <option>Vacation</option>
+            <option>Sick</option>
+            <option>Personal</option>
+            <option>FMLA</option>
+            <option>Other</option>
+          </select>
+        </div>
+        <div>
+          <label class="form-label">Status</label>
+          <select name="status" id="editPtoStatus" class="form-input">
+            <option>Approved</option>
+            <option>Pending</option>
+            <option>Denied</option>
+          </select>
+        </div>
+      </div>
+      <div style="margin-top:12px;">
+        <label class="form-label">Notes</label>
+        <textarea name="notes" id="editPtoNotes" class="form-input" rows="2"></textarea>
+      </div>
+      <div style="margin-top:16px;display:flex;gap:8px;justify-content:flex-end;">
+        <button type="button" class="btn btn-secondary" onclick="this.closest('.modal-overlay').style.display='none'">Cancel</button>
+        <button type="submit" class="btn btn-blue">Save Changes</button>
+      </div>
+    </form>
+  </div>
+</div>
+
+<script>
+function openEditPto(id, officer, start, end, type, status, notes) {
+  document.getElementById('editPtoForm').action = '/module/operations/pto/' + id + '/edit';
+  var select = document.getElementById('editPtoOfficer');
+  // Add current officer as option if not in list
+  var found = false;
+  for (var i = 0; i < select.options.length; i++) {
+    if (select.options[i].value === officer) { found = true; break; }
+  }
+  if (!found && officer) {
+    var opt = document.createElement('option');
+    opt.value = officer; opt.textContent = officer;
+    select.appendChild(opt);
+  }
+  select.value = officer;
+  document.getElementById('editPtoStart').value = start;
+  document.getElementById('editPtoEnd').value = end;
+  document.getElementById('editPtoType').value = type;
+  document.getElementById('editPtoStatus').value = status;
+  document.getElementById('editPtoNotes').value = notes;
+  document.getElementById('editPtoModal').style.display = 'flex';
+}
+</script>
+{% endblock %}

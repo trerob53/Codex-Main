@@ -1,0 +1,254 @@
+{% extends "training/base_training.html" %}
+{% block title %}Manage Courses — Training Portal{% endblock %}
+
+{% block content %}
+<h1 class="trn-page-title">Manage Courses</h1>
+<p class="trn-page-subtitle">Create, edit, and manage training courses</p>
+
+<!-- Search + New Course -->
+<div class="trn-search-bar">
+  <div class="trn-search-wrap">
+    <span class="trn-search-icon">&#128269;</span>
+    <input type="text" class="trn-search-input" id="manage-search" placeholder="Search courses..." oninput="filterManage()">
+  </div>
+  <button class="trn-btn trn-btn-primary" onclick="document.getElementById('create-modal').style.display='flex'">
+    + New Course
+  </button>
+</div>
+
+<!-- Courses Table -->
+{% if courses %}
+<div class="trn-card" style="padding:0; overflow:hidden;">
+  <table class="trn-table" id="manage-table">
+    <thead>
+      <tr>
+        <th>Title</th>
+        <th>Category</th>
+        <th>Status</th>
+        <th>Assigned To</th>
+        <th>Chapters</th>
+        <th>Created</th>
+        <th>Actions</th>
+      </tr>
+    </thead>
+    <tbody>
+      {% for course in courses %}
+      <tr>
+        <td style="font-weight:600;">{{ course.title }}</td>
+        <td><span class="trn-badge">{{ course.category or 'General' }}</span></td>
+        <td>
+          {% if course.status == 'Published' %}
+          <span class="trn-badge" style="background:rgba(34,197,94,0.15); color:var(--trn-green);">Published</span>
+          {% elif course.status == 'Draft' %}
+          <span class="trn-badge" style="background:rgba(234,179,8,0.15); color:var(--trn-yellow);">Draft</span>
+          {% elif course.status == 'Archived' %}
+          <span class="trn-badge" style="background:rgba(107,114,128,0.15); color:var(--trn-text-secondary);">Archived</span>
+          {% else %}
+          <span class="trn-badge">{{ course.status or 'Draft' }}</span>
+          {% endif %}
+        </td>
+        <td style="font-size:12px; color:var(--trn-text-secondary);">
+          {% set c_roles = course.assigned_roles|default('')|tojson %}
+          {% set c_sites = course.assigned_sites|default('')|tojson %}
+          {% if not course.assigned_roles and not course.assigned_sites %}
+            <span style="color:var(--trn-green);">All Users</span>
+          {% else %}
+            {% if course.assigned_roles %}{% for r in (course.assigned_roles|from_json if course.assigned_roles else []) %}<span class="trn-badge" style="font-size:10px;">{{ r|title }}</span> {% endfor %}{% endif %}
+            {% if course.assigned_sites %}{% for s in (course.assigned_sites|from_json if course.assigned_sites else []) %}<span class="trn-badge" style="font-size:10px; background:rgba(59,130,246,0.15); color:var(--trn-blue);">{{ s }}</span> {% endfor %}{% endif %}
+          {% endif %}
+        </td>
+        <td>{{ course.chapter_count|default(0) }}</td>
+        <td style="color:var(--trn-text-secondary); font-size:13px;">{{ course.created_at[:10] if course.created_at else '--' }}</td>
+        <td>
+          <div style="display:flex; gap:8px;">
+            <a href="{{ url_for('training.course_builder', course_id=course.course_id) }}" class="trn-btn trn-btn-primary trn-btn-sm">Build</a>
+            <button class="trn-btn trn-btn-secondary trn-btn-sm"
+                    onclick="openEditModal('{{ course.course_id }}', '{{ course.title|e }}', '{{ course.description|e if course.description else '' }}', '{{ course.category or '' }}', '{{ course.status or 'Draft' }}', '{{ course.assigned_roles|e if course.assigned_roles else '' }}', '{{ course.assigned_sites|e if course.assigned_sites else '' }}')">
+              Edit
+            </button>
+            <form method="post" style="display:inline;" onsubmit="return confirm('Delete this course? This cannot be undone.');">
+              <input type="hidden" name="action" value="delete">
+              <input type="hidden" name="course_id" value="{{ course.course_id }}">
+              <button type="submit" class="trn-btn trn-btn-sm" style="background:rgba(232,23,23,0.15); color:var(--trn-accent-light); border:none;">Delete</button>
+            </form>
+          </div>
+        </td>
+      </tr>
+      {% endfor %}
+    </tbody>
+  </table>
+</div>
+{% else %}
+<div class="trn-empty-state">
+  <div class="trn-empty-state-icon">&#128218;</div>
+  <div class="trn-empty-state-text">No courses created yet</div>
+  <div class="trn-empty-state-sub">Click "New Course" to create your first training course.</div>
+</div>
+{% endif %}
+
+<!-- Create Course Modal -->
+<div id="create-modal" style="display:none; position:fixed; top:0; left:0; right:0; bottom:0; background:rgba(0,0,0,0.7); z-index:300; align-items:center; justify-content:center;">
+  <div class="trn-card" style="width:500px; max-width:90vw; padding:28px;">
+    <div style="display:flex; justify-content:space-between; align-items:center; margin-bottom:20px;">
+      <div class="trn-section-title">New Course</div>
+      <button class="trn-btn trn-btn-ghost" onclick="document.getElementById('create-modal').style.display='none'" style="font-size:18px;">&times;</button>
+    </div>
+    <form method="post" action="{{ url_for('training.manage_courses') }}">
+      <input type="hidden" name="action" value="create">
+      <div class="trn-form-grid">
+        <div class="trn-form-group full">
+          <label class="trn-form-label">Title *</label>
+          <input type="text" class="trn-form-input" name="title" required placeholder="Course title">
+        </div>
+        <div class="trn-form-group full">
+          <label class="trn-form-label">Description</label>
+          <textarea class="trn-form-input" name="description" rows="3" placeholder="Course description" style="resize:vertical;"></textarea>
+        </div>
+        <div class="trn-form-group">
+          <label class="trn-form-label">Category</label>
+          <select class="trn-select" name="category" style="width:100%;">
+            <option>General Training</option>
+            <option>Safety &amp; Security</option>
+            <option>Customer Service</option>
+            <option>Compliance</option>
+            <option>Leadership</option>
+            <option>Technical Skills</option>
+            <option>Onboarding</option>
+          </select>
+        </div>
+        <div class="trn-form-group">
+          <label class="trn-form-label">Status</label>
+          <select class="trn-select" name="status" style="width:100%;">
+            <option>Draft</option>
+            <option>Published</option>
+            <option>Archived</option>
+          </select>
+        </div>
+        <div class="trn-form-group full">
+          <label class="trn-form-label">Assign to Roles <span style="color:var(--trn-text-muted); font-weight:400;">(leave empty for all)</span></label>
+          <div style="display:flex; gap:12px; flex-wrap:wrap;">
+            {% for r in all_roles %}
+            <label style="display:flex; align-items:center; gap:4px; font-size:13px; cursor:pointer;">
+              <input type="checkbox" name="assigned_roles" value="{{ r }}"> {{ r|title }}
+            </label>
+            {% endfor %}
+          </div>
+        </div>
+        <div class="trn-form-group full">
+          <label class="trn-form-label">Assign to Sites <span style="color:var(--trn-text-muted); font-weight:400;">(leave empty for all)</span></label>
+          <div style="display:flex; gap:8px; flex-wrap:wrap;">
+            {% for s in all_sites %}
+            <label style="display:flex; align-items:center; gap:4px; font-size:13px; cursor:pointer;">
+              <input type="checkbox" name="assigned_sites" value="{{ s }}"> {{ s }}
+            </label>
+            {% endfor %}
+          </div>
+        </div>
+      </div>
+      <div style="margin-top:20px; display:flex; justify-content:flex-end; gap:8px;">
+        <button type="button" class="trn-btn trn-btn-secondary" onclick="document.getElementById('create-modal').style.display='none'">Cancel</button>
+        <button type="submit" class="trn-btn trn-btn-primary">Create Course</button>
+      </div>
+    </form>
+  </div>
+</div>
+
+<!-- Edit Course Modal -->
+<div id="edit-modal" style="display:none; position:fixed; top:0; left:0; right:0; bottom:0; background:rgba(0,0,0,0.7); z-index:300; align-items:center; justify-content:center;">
+  <div class="trn-card" style="width:500px; max-width:90vw; padding:28px;">
+    <div style="display:flex; justify-content:space-between; align-items:center; margin-bottom:20px;">
+      <div class="trn-section-title">Edit Course</div>
+      <button class="trn-btn trn-btn-ghost" onclick="document.getElementById('edit-modal').style.display='none'" style="font-size:18px;">&times;</button>
+    </div>
+    <form method="post" action="{{ url_for('training.manage_courses') }}">
+      <input type="hidden" name="action" value="update">
+      <input type="hidden" name="course_id" id="edit-course-id">
+      <div class="trn-form-grid">
+        <div class="trn-form-group full">
+          <label class="trn-form-label">Title *</label>
+          <input type="text" class="trn-form-input" name="title" id="edit-title" required>
+        </div>
+        <div class="trn-form-group full">
+          <label class="trn-form-label">Description</label>
+          <textarea class="trn-form-input" name="description" id="edit-description" rows="3" style="resize:vertical;"></textarea>
+        </div>
+        <div class="trn-form-group">
+          <label class="trn-form-label">Category</label>
+          <select class="trn-select" name="category" id="edit-category" style="width:100%;">
+            <option>General Training</option>
+            <option>Safety &amp; Security</option>
+            <option>Customer Service</option>
+            <option>Compliance</option>
+            <option>Leadership</option>
+            <option>Technical Skills</option>
+            <option>Onboarding</option>
+          </select>
+        </div>
+        <div class="trn-form-group">
+          <label class="trn-form-label">Status</label>
+          <select class="trn-select" name="status" id="edit-status" style="width:100%;">
+            <option>Draft</option>
+            <option>Published</option>
+            <option>Archived</option>
+          </select>
+        </div>
+        <div class="trn-form-group full">
+          <label class="trn-form-label">Assign to Roles</label>
+          <div style="display:flex; gap:12px; flex-wrap:wrap;" id="edit-roles-wrap">
+            {% for r in all_roles %}
+            <label style="display:flex; align-items:center; gap:4px; font-size:13px; cursor:pointer;">
+              <input type="checkbox" name="assigned_roles" value="{{ r }}" class="edit-role-cb"> {{ r|title }}
+            </label>
+            {% endfor %}
+          </div>
+        </div>
+        <div class="trn-form-group full">
+          <label class="trn-form-label">Assign to Sites</label>
+          <div style="display:flex; gap:8px; flex-wrap:wrap;" id="edit-sites-wrap">
+            {% for s in all_sites %}
+            <label style="display:flex; align-items:center; gap:4px; font-size:13px; cursor:pointer;">
+              <input type="checkbox" name="assigned_sites" value="{{ s }}" class="edit-site-cb"> {{ s }}
+            </label>
+            {% endfor %}
+          </div>
+        </div>
+      </div>
+      <div style="margin-top:20px; display:flex; justify-content:flex-end; gap:8px;">
+        <button type="button" class="trn-btn trn-btn-secondary" onclick="document.getElementById('edit-modal').style.display='none'">Cancel</button>
+        <button type="submit" class="trn-btn trn-btn-primary">Save Changes</button>
+      </div>
+    </form>
+  </div>
+</div>
+
+<script>
+function filterManage() {
+  var query = document.getElementById('manage-search').value.toLowerCase();
+  document.querySelectorAll('#manage-table tbody tr').forEach(function(row) {
+    row.style.display = row.textContent.toLowerCase().includes(query) ? '' : 'none';
+  });
+}
+
+function openEditModal(courseId, title, description, category, status, roles, sites) {
+  document.getElementById('edit-course-id').value = courseId;
+  document.getElementById('edit-title').value = title;
+  document.getElementById('edit-description').value = description;
+  document.getElementById('edit-category').value = category || 'General Training';
+  document.getElementById('edit-status').value = status || 'Draft';
+  // Set role checkboxes
+  var roleArr = roles ? JSON.parse(roles) : [];
+  document.querySelectorAll('.edit-role-cb').forEach(function(cb) { cb.checked = roleArr.includes(cb.value); });
+  // Set site checkboxes
+  var siteArr = sites ? JSON.parse(sites) : [];
+  document.querySelectorAll('.edit-site-cb').forEach(function(cb) { cb.checked = siteArr.includes(cb.value); });
+  document.getElementById('edit-modal').style.display = 'flex';
+}
+
+// Close modals on overlay click
+['create-modal', 'edit-modal'].forEach(function(id) {
+  document.getElementById(id).addEventListener('click', function(e) {
+    if (e.target === this) this.style.display = 'none';
+  });
+});
+</script>
+{% endblock %}

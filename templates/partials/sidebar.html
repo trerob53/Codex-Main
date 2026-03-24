@@ -1,0 +1,40 @@
+<nav class="sidebar">
+  <div class="sidebar-brand">CERASUS</div>
+
+  <div style="padding:4px 0;">
+    <a href="{{ url_for('hub.picker') }}"
+       class="sidebar-link {{ 'active' if active_page == 'picker' else '' }}">
+      Home
+    </a>
+  </div>
+
+  {% if current_user %}
+  <div class="sidebar-section">Hub</div>
+  <a href="{{ url_for('hub.people') }}" class="sidebar-link {{ 'active' if active_page == 'people' else '' }}">People &amp; Sites</a>
+  <a href="{{ url_for('hub.analytics') }}" class="sidebar-link {{ 'active' if active_page == 'analytics' else '' }}">Analytics</a>
+  <a href="{{ url_for('hub.activity') }}" class="sidebar-link {{ 'active' if active_page == 'activity' else '' }}">Recent Activity</a>
+  <a href="{{ url_for('hub.announcements') }}" class="sidebar-link {{ 'active' if active_page == 'announcements' else '' }}">Announcements</a>
+
+  <div class="sidebar-section">Modules</div>
+  {% for mod in modules_list %}
+  <a href="{{ url_for('modules.module_index', module_id=mod.module_id) }}"
+     class="sidebar-link {{ 'active' if active_module == mod.module_id else '' }}">
+    {{ mod.name }}
+  </a>
+  {% endfor %}
+
+  {% if current_user.role == 'admin' %}
+  <div class="sidebar-divider"></div>
+  <div class="sidebar-section">Admin</div>
+  <a href="{{ url_for('admin.users') }}" class="sidebar-link {{ 'active' if active_page == 'admin_users' else '' }}">Users</a>
+  <a href="{{ url_for('admin.audit_page') }}" class="sidebar-link {{ 'active' if active_page == 'admin_audit' else '' }}">Audit Trail</a>
+  <a href="{{ url_for('admin.backups') }}" class="sidebar-link {{ 'active' if active_page == 'admin_backups' else '' }}">Backups</a>
+  <a href="{{ url_for('admin.settings') }}" class="sidebar-link {{ 'active' if active_page == 'admin_settings' else '' }}">Settings</a>
+  {% endif %}
+  {% endif %}
+
+  <div style="flex:1;"></div>
+  <div style="padding:12px 18px; font-size:11px; color:var(--text-light); letter-spacing:1px;">
+    CERASUS HUB v{{ app_version }}
+  </div>
+</nav>

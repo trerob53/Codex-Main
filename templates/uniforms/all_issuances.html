@@ -1,0 +1,92 @@
+{% extends "base.html" %}
+{% block title %}All Issuances — Uniforms — Cerasus Hub{% endblock %}
+
+{% block tabs %}
+<div class="module-tabs">
+  {% for section_title, section_items in sidebar_sections %}
+    {% for label, endpoint in section_items %}
+    <a href="{{ url_for(endpoint) }}" class="module-tab {{ 'active' if active_tab == label else '' }}">{{ label }}</a>
+    {% endfor %}
+  {% endfor %}
+</div>
+{% endblock %}
+
+{% block content %}
+<div class="page-header">
+  <div>
+    <h1 class="page-title">All Issuances</h1>
+    <p class="page-subtitle">Complete history of all uniform issuances and returns</p>
+  </div>
+</div>
+
+<div class="card" style="padding:20px;">
+  <div class="filter-bar" style="margin-bottom:16px;">
+    <div class="filter-search">
+      <span class="filter-search-icon">&#128269;</span>
+      <input type="text" placeholder="Search issuances..." oninput="filterTable(this.value, 'issuances-table')">
+    </div>
+    <select class="filter-select" id="status-filter" onchange="applyFilters()">
+      <option value="">All Statuses</option>
+      <option>Outstanding</option>
+      <option>Returned</option>
+    </select>
+  </div>
+
+  <div style="overflow-x:auto;">
+    <table class="data-table" id="issuances-table">
+      <thead>
+        <tr>
+          <th>Officer</th>
+          <th>Item</th>
+          <th>Size</th>
+          <th>Qty</th>
+          <th>Condition</th>
+          <th>Date Issued</th>
+          <th>Status</th>
+          <th>Date Returned</th>
+          <th>Issued By</th>
+        </tr>
+      </thead>
+      <tbody>
+        {% for iss in issuances %}
+        <tr data-status="{{ iss.status }}">
+          <td style="font-weight:600;">{{ iss.officer_name|officer_link }}</td>
+          <td>{{ iss.item_name }}</td>
+          <td>{{ iss.size or '—' }}</td>
+          <td>{{ iss.quantity }}</td>
+          <td>{{ iss.condition_issued or '—' }}</td>
+          <td style="font-size:13px;">{{ iss.date_issued or '—' }}</td>
+          <td>
+            <span class="badge badge-{{ 'blue' if iss.status == 'Outstanding' else 'success' if iss.status == 'Returned' else 'warning' }}">{{ iss.status }}</span>
+          </td>
+          <td style="font-size:13px;">{{ iss.date_returned or '—' }}</td>
+          <td style="font-size:13px;">{{ iss.issued_by or '—' }}</td>
+        </tr>
+        {% else %}
+        <tr><td colspan="9" style="text-align:center; color:var(--text-light); padding:32px;">No issuances found</td></tr>
+        {% endfor %}
+      </tbody>
+    </table>
+  </div>
+  <div style="margin-top:12px; font-size:13px; color:var(--text-light);">
+    {{ issuances|length }} total issuance{{ 's' if issuances|length != 1 else '' }}
+  </div>
+</div>
+
+<script>
+function filterTable(query, tableId) {
+  applyFilters(query);
+}
+function applyFilters(query) {
+  if (query === undefined) query = document.querySelector('.filter-search input').value;
+  var rows = document.getElementById('issuances-table').querySelectorAll('tbody tr');
+  var statusFilter = document.getElementById('status-filter').value;
+  query = (query || '').toLowerCase();
+  rows.forEach(function(row) {
+    var textMatch = !query || row.textContent.toLowerCase().includes(query);
+    var statusMatch = !statusFilter || row.dataset.status === statusFilter;
+    row.style.display = textMatch && statusMatch ? '' : 'none';
+  });
+}
+</script>
+{% endblock %}

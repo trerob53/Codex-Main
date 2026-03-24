@@ -1,0 +1,120 @@
+{% extends "base.html" %}
+{% block title %}Dashboard — Uniforms — Cerasus Hub{% endblock %}
+
+{% block tabs %}
+<div class="module-tabs">
+  {% for section_title, section_items in sidebar_sections %}
+    {% for label, endpoint in section_items %}
+    <a href="{{ url_for(endpoint) }}" class="module-tab {{ 'active' if active_tab == label else '' }}">{{ label }}</a>
+    {% endfor %}
+  {% endfor %}
+</div>
+{% endblock %}
+
+{% block content %}
+<div class="page-header">
+  <div>
+    <h1 class="page-title">&#128084; Uniforms Dashboard</h1>
+    <p class="page-subtitle">Overview of uniform issuance, inventory, and compliance</p>
+  </div>
+  <div>
+    <form method="get" style="display:flex; gap:8px; align-items:center;">
+      <select name="site" class="filter-select" onchange="this.form.submit()">
+        <option value="All Sites">All Sites</option>
+        {% for s in sites %}
+        <option {{ 'selected' if site_filter == s else '' }}>{{ s }}</option>
+        {% endfor %}
+      </select>
+    </form>
+  </div>
+</div>
+
+<!-- KPI Cards -->
+<div class="stat-cards">
+  <div class="stat-card">
+    <div class="stat-card-label">Active Officers</div>
+    <div class="stat-card-value">{{ summary.active_officers }}</div>
+  </div>
+  <div class="stat-card">
+    <div class="stat-card-label">Outstanding Items</div>
+    <div class="stat-card-value">{{ summary.total_outstanding }}</div>
+  </div>
+  <div class="stat-card">
+    <div class="stat-card-label">Low Stock Items</div>
+    <div class="stat-card-value" style="color:{{ '#D97706' if summary.low_stock_count > 0 else 'inherit' }};">{{ summary.low_stock_count }}</div>
+  </div>
+  <div class="stat-card">
+    <div class="stat-card-label">Compliance Rate</div>
+    <div class="stat-card-value">{{ summary.compliance_rate }}%</div>
+  </div>
+</div>
+
+<!-- Low Stock Alerts -->
+{% if summary.low_stock_items %}
+<div class="card" style="padding:20px; margin-bottom:24px; border-left:4px solid #D97706;">
+  <h2 class="section-title" style="margin-bottom:12px;">&#9888; Low Stock Alerts</h2>
+  <div style="overflow-x:auto;">
+    <table class="data-table">
+      <thead><tr><th>Item</th><th>Category</th><th>In Stock</th><th>Reorder Point</th></tr></thead>
+      <tbody>
+        {% for item in summary.low_stock_items %}
+        <tr>
+          <td style="font-weight:600;">{{ item.name }}</td>
+          <td>{{ item.category }}</td>
+          <td><span class="badge badge-danger">{{ item.stock_qty }}</span></td>
+          <td>{{ item.reorder_point }}</td>
+        </tr>
+        {% endfor %}
+      </tbody>
+    </table>
+  </div>
+</div>
+{% endif %}
+
+<!-- Recent Issuances -->
+<div class="card" style="padding:20px; margin-bottom:24px;">
+  <div style="display:flex; justify-content:space-between; align-items:center; margin-bottom:16px;">
+    <h2 class="section-title" style="margin:0;">Recent Issuances</h2>
+    <a href="{{ url_for('uniforms.all_issuances') }}" class="btn btn-sm btn-secondary">View All &#8594;</a>
+  </div>
+  <div style="overflow-x:auto;">
+    <table class="data-table">
+      <thead><tr><th>Officer</th><th>Item</th><th>Size</th><th>Qty</th><th>Date</th><th>Status</th></tr></thead>
+      <tbody>
+        {% for iss in summary.recent_issuances %}
+        <tr>
+          <td style="font-weight:600;">{{ iss.officer_name|officer_link }}</td>
+          <td>{{ iss.item_name }}</td>
+          <td>{{ iss.size or '—' }}</td>
+          <td>{{ iss.quantity }}</td>
+          <td style="font-size:13px;">{{ iss.date_issued or '—' }}</td>
+          <td><span class="badge badge-{{ 'blue' if iss.status == 'Outstanding' else 'success' }}">{{ iss.status }}</span></td>
+        </tr>
+        {% else %}
+        <tr><td colspan="6" style="text-align:center; color:var(--text-light); padding:32px;">No recent issuances</td></tr>
+        {% endfor %}
+      </tbody>
+    </table>
+  </div>
+</div>
+
+<!-- Outstanding by Officer -->
+{% if summary.outstanding_by_officer %}
+<div class="card" style="padding:20px;">
+  <h2 class="section-title" style="margin-bottom:12px;">Outstanding Items by Officer</h2>
+  <div style="overflow-x:auto;">
+    <table class="data-table">
+      <thead><tr><th>Officer</th><th>Items Outstanding</th></tr></thead>
+      <tbody>
+        {% for name, count in summary.outstanding_by_officer[:15] %}
+        <tr>
+          <td style="font-weight:600;">{{ name|officer_link }}</td>
+          <td><span class="badge badge-blue">{{ count }}</span></td>
+        </tr>
+        {% endfor %}
+      </tbody>
+    </table>
+  </div>
+</div>
+{% endif %}
+{% endblock %}

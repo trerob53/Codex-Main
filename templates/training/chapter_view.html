@@ -1,0 +1,418 @@
+{% extends "training/base_training.html" %}
+{% block title %}{{ chapter.title }} — {{ course.title }} — Cerasus Hub{% endblock %}
+
+{% block tabs %}{% endblock %}
+
+{% block content %}
+<style>
+  /* Course Reader Layout — matches elearning.vanguard-mgmt.com */
+  .reader-layout {
+    display: grid;
+    grid-template-columns: 300px 1fr;
+    gap: 0;
+    min-height: calc(100vh - 56px);
+    margin: -24px -32px;
+  }
+
+  .reader-sidebar {
+    background: var(--trn-card);
+    border-right: 1px solid var(--trn-card-border);
+    padding: 0;
+    overflow-y: auto;
+    max-height: calc(100vh - 56px);
+    position: sticky;
+    top: 56px;
+  }
+
+  .reader-sidebar-header {
+    padding: 20px 20px 16px;
+    border-bottom: 1px solid var(--trn-card-border);
+  }
+
+  .reader-sidebar-header .back-link {
+    display: flex;
+    align-items: center;
+    gap: 6px;
+    color: var(--trn-text-secondary);
+    text-decoration: none;
+    font-size: 13px;
+    margin-bottom: 12px;
+  }
+
+  .reader-sidebar-header .back-link:hover { color: var(--trn-text); }
+
+  .reader-sidebar-header .course-title {
+    font-size: 16px;
+    font-weight: 700;
+    color: var(--trn-text);
+    margin-bottom: 8px;
+  }
+
+  .reader-progress {
+    display: flex;
+    align-items: center;
+    justify-content: space-between;
+    font-size: 12px;
+    color: var(--trn-text-secondary);
+    margin-bottom: 8px;
+  }
+
+  .reader-progress-bar {
+    height: 4px;
+    background: var(--trn-card-border);
+    border-radius: 2px;
+    overflow: hidden;
+  }
+
+  .reader-progress-fill {
+    height: 100%;
+    background: #22C55E;
+    border-radius: 2px;
+    transition: width 0.3s;
+  }
+
+  /* Module section */
+  .reader-module {
+    padding: 12px 20px 4px;
+  }
+
+  .reader-module-title {
+    font-size: 11px;
+    font-weight: 700;
+    text-transform: uppercase;
+    letter-spacing: 1px;
+    color: var(--trn-text-secondary);
+    margin-bottom: 8px;
+    display: flex;
+    align-items: center;
+    gap: 6px;
+  }
+
+  /* Chapter list items */
+  .reader-chapter {
+    display: flex;
+    align-items: center;
+    gap: 10px;
+    padding: 10px 20px;
+    text-decoration: none;
+    color: var(--trn-text-secondary);
+    font-size: 13px;
+    border-left: 3px solid transparent;
+    transition: all 0.15s;
+  }
+
+  .reader-chapter:hover {
+    background: var(--trn-card-hover);
+    color: var(--trn-text);
+  }
+
+  .reader-chapter.active {
+    background: rgba(232, 23, 23, 0.08);
+    border-left-color: #E81717;
+    color: #E81717;
+    font-weight: 600;
+  }
+
+  [data-theme="dark"] .reader-chapter.active {
+    background: rgba(232, 23, 23, 0.12);
+    color: #EF4444;
+    border-left-color: #EF4444;
+  }
+
+  .reader-chapter .ch-status {
+    width: 22px;
+    height: 22px;
+    border-radius: 50%;
+    display: flex;
+    align-items: center;
+    justify-content: center;
+    font-size: 11px;
+    flex-shrink: 0;
+  }
+
+  .reader-chapter .ch-status.done {
+    background: #22C55E;
+    color: white;
+  }
+
+  .reader-chapter .ch-status.pending {
+    background: var(--trn-card-border);
+    color: var(--trn-text-secondary);
+  }
+
+  .reader-chapter .ch-label {
+    overflow: hidden;
+    text-overflow: ellipsis;
+    white-space: nowrap;
+  }
+
+  /* Content area */
+  .reader-content {
+    padding: 48px 56px;
+    max-width: 920px;
+    margin: 0 auto;
+  }
+
+  .reader-content h1 {
+    font-size: 30px;
+    font-weight: 800;
+    margin-bottom: 36px;
+    color: var(--trn-text);
+    line-height: 1.3;
+  }
+
+  /* Reading material card */
+  .reading-card {
+    background: var(--trn-card);
+    border: 1px solid var(--trn-card-border);
+    border-radius: 14px;
+    padding: 44px 48px;
+    margin-bottom: 28px;
+    font-size: 15.5px;
+    line-height: 1.9;
+    color: var(--trn-text);
+  }
+
+  /* First section header (e.g. THE MEANING OF CERASUS) */
+  .reading-card h2 {
+    font-size: 15px;
+    font-weight: 800;
+    text-transform: uppercase;
+    letter-spacing: 2px;
+    margin: 48px 0 20px;
+    padding-bottom: 0;
+    color: var(--trn-text);
+  }
+
+  /* Numbered sub-headers (e.g. 1.2 — OUR MISSION) */
+  .reading-card h3 {
+    font-size: 15px;
+    font-weight: 800;
+    text-transform: uppercase;
+    letter-spacing: 1.5px;
+    margin: 48px 0 20px;
+    padding-top: 32px;
+    border-top: 1px solid var(--trn-card-border);
+    color: var(--trn-text);
+  }
+
+  .reading-card h2:first-child {
+    margin-top: 0;
+  }
+
+  .reading-card h3:first-child {
+    margin-top: 0;
+    padding-top: 0;
+    border-top: none;
+  }
+
+  .reading-card p {
+    margin-bottom: 20px;
+  }
+
+  .reading-card p:last-child {
+    margin-bottom: 0;
+  }
+
+  .reading-card ul, .reading-card ol {
+    margin: 16px 0 24px 28px;
+    padding: 0;
+  }
+
+  .reading-card li {
+    margin-bottom: 14px;
+    padding-left: 4px;
+  }
+
+  .reading-card li:last-child {
+    margin-bottom: 0;
+  }
+
+  .reading-card strong {
+    font-weight: 700;
+  }
+
+  /* Callout box — red left border like elearning */
+  .reading-card blockquote,
+  .reading-card .callout {
+    background: rgba(232, 23, 23, 0.06);
+    border-left: 4px solid #E81717;
+    border-radius: 0 8px 8px 0;
+    padding: 20px 24px;
+    margin: 24px 0;
+    font-size: 14.5px;
+  }
+
+  [data-theme="dark"] .reading-card blockquote,
+  [data-theme="dark"] .reading-card .callout {
+    background: rgba(232, 23, 23, 0.1);
+  }
+
+  /* Bottom nav */
+  .reader-bottom-nav {
+    display: flex;
+    align-items: center;
+    justify-content: space-between;
+    padding: 24px 0;
+    margin-top: 8px;
+    border-top: 1px solid var(--trn-card-border);
+  }
+
+  .reader-btn {
+    display: inline-flex;
+    align-items: center;
+    gap: 6px;
+    padding: 10px 20px;
+    border-radius: 8px;
+    text-decoration: none;
+    font-size: 14px;
+    font-weight: 600;
+    transition: all 0.15s;
+    border: 1px solid var(--trn-card-border);
+    color: var(--trn-text-secondary);
+    background: transparent;
+    cursor: pointer;
+  }
+
+  .reader-btn:hover {
+    background: var(--trn-card-hover);
+    color: var(--trn-text);
+  }
+
+  .reader-btn.primary {
+    background: #E81717;
+    color: white;
+    border-color: #E81717;
+  }
+
+  .reader-btn.primary:hover {
+    background: #C41414;
+  }
+
+  .reader-btn.completed {
+    background: transparent;
+    color: #22C55E;
+    border-color: #22C55E;
+  }
+
+  @media (max-width: 900px) {
+    .reader-layout { grid-template-columns: 1fr; }
+    .reader-sidebar { display: none; }
+    .reader-content { padding: 20px 16px; }
+  }
+</style>
+
+<div class="reader-layout">
+  <!-- Left Sidebar: Course Navigation -->
+  <div class="reader-sidebar">
+    <div class="reader-sidebar-header">
+      <a href="{{ url_for('training.my_courses') }}" class="back-link">&#8592; Back to Courses</a>
+      <div class="course-title">{{ course.title }}</div>
+      {% set total_ch = chapters|length %}
+      {% set done_ch = completed_ids|length %}
+      {% set pct = (done_ch / total_ch * 100)|round(0)|int if total_ch else 0 %}
+      <div class="reader-progress">
+        <span>{{ done_ch }} / {{ total_ch }} lessons completed</span>
+        <span>{{ pct }}%</span>
+      </div>
+      <div class="reader-progress-bar">
+        <div class="reader-progress-fill" style="width:{{ pct }}%;"></div>
+      </div>
+    </div>
+
+    {% set current_module = None %}
+    {% for ch in chapters %}
+      {% set mod_id = ch.module_id or '' %}
+      {% if mod_id != current_module %}
+        {% set current_module = mod_id %}
+        {% set mod_title = '' %}
+        {% for m in (modules or []) %}
+          {% if m.module_id == mod_id %}{% set mod_title = m.title %}{% endif %}
+        {% endfor %}
+        {% if mod_title %}
+        <div class="reader-module">
+          <div class="reader-module-title">&#9662; {{ mod_title }}</div>
+        </div>
+        {% endif %}
+      {% endif %}
+      <a href="{{ url_for('training.chapter_view', course_id=course.course_id, chapter_id=ch.chapter_id) }}"
+         class="reader-chapter {{ 'active' if ch.chapter_id == chapter.chapter_id else '' }}">
+        <span class="ch-status {{ 'done' if ch.chapter_id in completed_ids else 'pending' }}">
+          {% if ch.chapter_id in completed_ids %}&#10003;{% else %}&#9675;{% endif %}
+        </span>
+        <span class="ch-label">{{ ch.title }}</span>
+      </a>
+    {% endfor %}
+  </div>
+
+  <!-- Main Content Area -->
+  <div class="reader-content">
+    <h1>{{ chapter.title }}</h1>
+
+    <div class="reading-card">
+      {% if chapter.content %}
+        {{ chapter.content|format_chapter }}
+      {% else %}
+      <div style="text-align:center; padding:48px; color:var(--trn-text-secondary);">
+        <div style="font-size:48px; margin-bottom:16px;">&#128196;</div>
+        <p>No content has been added to this chapter yet.</p>
+      </div>
+      {% endif %}
+    </div>
+
+    <!-- Bottom Navigation -->
+    <div class="reader-bottom-nav">
+      <div>
+        {% if prev_chapter %}
+        <a href="{{ url_for('training.chapter_view', course_id=course.course_id, chapter_id=prev_chapter.chapter_id) }}" class="reader-btn">
+          &#8592; Previous
+        </a>
+        {% else %}
+        <span></span>
+        {% endif %}
+      </div>
+
+      <div style="display:flex; gap:10px;">
+        {% if is_completed %}
+        <span class="reader-btn completed">&#10003; Completed</span>
+        {% elif not (chapter.has_test and test) %}
+        <form method="post" action="{{ url_for('training.mark_complete', course_id=course.course_id, chapter_id=chapter.chapter_id) }}" style="display:inline;">
+          <button type="submit" class="reader-btn" style="background:#22C55E; color:white; border-color:#22C55E;">&#10003; Mark Complete</button>
+        </form>
+        {% endif %}
+
+        {% if test %}
+        <a href="{{ url_for('training.take_quiz', course_id=course.course_id, chapter_id=chapter.chapter_id) }}" class="reader-btn primary">
+          &#128221; {{ 'Retake Quiz' if best_attempt else 'Take Quiz' }}
+        </a>
+        {% endif %}
+      </div>
+
+      <div>
+        {% if next_chapter %}
+        <a href="{{ url_for('training.chapter_view', course_id=course.course_id, chapter_id=next_chapter.chapter_id) }}" class="reader-btn primary">
+          Next &#8594;
+        </a>
+        {% else %}
+        <span></span>
+        {% endif %}
+      </div>
+    </div>
+
+    {% if test and best_attempt %}
+    <div style="margin-top:16px; padding:16px 20px; background:var(--trn-card); border:1px solid var(--trn-card-border); border-radius:10px;">
+      <div style="display:flex; justify-content:space-between; align-items:center;">
+        <div>
+          <div style="font-weight:600;">Quiz Results</div>
+          <div style="font-size:13px; color:var(--trn-text-secondary);">Best attempt: {{ best_attempt.score|round(1) }}%</div>
+        </div>
+        <span class="badge badge-{{ 'success' if best_attempt.passed else 'danger' }}" style="font-size:16px; padding:8px 16px;">
+          {{ best_attempt.score|round(0)|int }}%
+          {{ 'Passed' if best_attempt.passed else 'Failed' }}
+        </span>
+      </div>
+    </div>
+    {% endif %}
+  </div>
+</div>
+{% endblock %}

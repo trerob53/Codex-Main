@@ -1,0 +1,94 @@
+{% extends "base.html" %}
+{% block title %}Site Comparison — Attendance — Cerasus Hub{% endblock %}
+
+{% block tabs %}
+<div class="module-tabs">
+  <a href="{{ url_for('attendance.dashboard') }}" class="module-tab {{ 'active' if active_tab == 'dashboard' }}">Dashboard</a>
+  <a href="{{ url_for('attendance.roster') }}" class="module-tab {{ 'active' if active_tab == 'roster' }}">Roster</a>
+  <a href="{{ url_for('attendance.sites') }}" class="module-tab {{ 'active' if active_tab == 'sites' }}">Sites</a>
+  <a href="{{ url_for('attendance.log_infraction') }}" class="module-tab {{ 'active' if active_tab == 'log' }}">Log Infraction</a>
+  <a href="{{ url_for('attendance.discipline') }}" class="module-tab {{ 'active' if active_tab == 'discipline' }}">Discipline</a>
+  <a href="{{ url_for('attendance.reviews') }}" class="module-tab {{ 'active' if active_tab == 'reviews' }}">Reviews</a>
+  <a href="{{ url_for('attendance.reports') }}" class="module-tab {{ 'active' if active_tab == 'reports' }}">Reports</a>
+  <a href="{{ url_for('attendance.analytics') }}" class="module-tab {{ 'active' if active_tab == 'analytics' }}">Analytics</a>
+</div>
+{% endblock %}
+
+{% block content %}
+<div class="page-header">
+  <div>
+    <h1 class="page-title">Site Comparison</h1>
+    <p class="page-subtitle">Compare attendance metrics across all sites</p>
+  </div>
+  <div>
+    <a href="{{ url_for('attendance.sites') }}" class="btn btn-secondary">Back to Sites</a>
+  </div>
+</div>
+
+<!-- Attendance Comparison -->
+<div class="card" style="margin-top:16px;">
+  <div class="section-title">Officer & Points Summary</div>
+  {% if site_summary %}
+  <table class="data-table">
+    <thead>
+      <tr>
+        <th>Site</th>
+        <th>Officers</th>
+        <th>Total Active Points</th>
+        <th>Avg Points / Officer</th>
+        <th>Risk Level</th>
+      </tr>
+    </thead>
+    <tbody>
+      {% for site in site_summary %}
+      <tr>
+        <td style="font-weight:600;">{{ site.site }}</td>
+        <td>{{ site.officer_count }}</td>
+        <td>{{ "%.1f"|format(site.total_points or 0) }}</td>
+        <td>{{ "%.1f"|format(site.avg_points or 0) }}</td>
+        <td>
+          {% set avg = site.avg_points or 0 %}
+          {% if avg >= 6 %}
+            <span class="badge badge-danger">High</span>
+          {% elif avg >= 3 %}
+            <span class="badge badge-warning">Medium</span>
+          {% else %}
+            <span class="badge badge-success">Low</span>
+          {% endif %}
+        </td>
+      </tr>
+      {% endfor %}
+    </tbody>
+  </table>
+  {% else %}
+  <p style="color:var(--text-light); padding:16px;">No site data available.</p>
+  {% endif %}
+</div>
+
+<!-- Infraction Comparison -->
+<div class="card" style="margin-top:24px;">
+  <div class="section-title">Infraction Summary by Site</div>
+  {% if infraction_summary %}
+  <table class="data-table">
+    <thead>
+      <tr>
+        <th>Site</th>
+        <th>Total Infractions</th>
+        <th>Active Points Total</th>
+      </tr>
+    </thead>
+    <tbody>
+      {% for site in infraction_summary %}
+      <tr>
+        <td style="font-weight:600;">{{ site.site }}</td>
+        <td>{{ site.infraction_count }}</td>
+        <td>{{ "%.1f"|format(site.total_active_points or 0) }}</td>
+      </tr>
+      {% endfor %}
+    </tbody>
+  </table>
+  {% else %}
+  <p style="color:var(--text-light); padding:16px;">No infraction data by site available.</p>
+  {% endif %}
+</div>
+{% endblock %}

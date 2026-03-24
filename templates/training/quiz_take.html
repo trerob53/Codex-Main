@@ -1,0 +1,58 @@
+{% extends "training/base_training.html" %}
+{% block title %}Quiz: {{ chapter.title }} — Cerasus Hub{% endblock %}
+
+{% block tabs %}
+<div class="module-tabs">
+  {% for section_title, section_items in sidebar_sections %}
+    {% for label, endpoint in section_items %}
+    <a href="{{ url_for(endpoint) }}" class="module-tab {{ 'active' if active_tab == label else '' }}">{{ label }}</a>
+    {% endfor %}
+  {% endfor %}
+</div>
+{% endblock %}
+
+{% block content %}
+<div style="margin-bottom:16px;">
+  <a href="{{ url_for('training.chapter_view', course_id=course.course_id, chapter_id=chapter.chapter_id) }}" style="color:var(--text-light); text-decoration:none; font-size:14px;">
+    &#8592; Back to {{ chapter.title }}
+  </a>
+</div>
+
+<div style="max-width:800px; margin:0 auto;">
+  <div class="card" style="padding:24px; margin-bottom:24px; border-top:4px solid #059669;">
+    <h1 style="margin:0 0 4px; font-size:22px;">&#128221; Quiz: {{ chapter.title }}</h1>
+    <p style="color:var(--text-light); margin:0; font-size:14px;">
+      {{ test.questions|length }} question{{ 's' if test.questions|length != 1 else '' }}
+      &middot; Passing score: {{ test.passing_score|default(70) }}%
+    </p>
+  </div>
+
+  <form method="post">
+    {% for q in test.questions %}
+    <div class="card" style="padding:20px; margin-bottom:16px;">
+      <div style="display:flex; gap:12px; margin-bottom:16px;">
+        <div style="width:32px; height:32px; border-radius:50%; background:#059669; color:white; display:flex; align-items:center; justify-content:center; font-weight:700; font-size:14px; flex-shrink:0;">
+          {{ loop.index }}
+        </div>
+        <div style="font-weight:600; font-size:15px; padding-top:4px;">{{ q.question }}</div>
+      </div>
+      <div style="display:grid; gap:8px; padding-left:44px;">
+        {% for opt in q.options %}
+        <label style="display:flex; align-items:center; gap:10px; padding:10px 14px; border:1px solid var(--border); border-radius:8px; cursor:pointer; transition:all 0.15s;"
+               onmouseover="this.style.borderColor='#059669'" onmouseout="if(!this.querySelector('input').checked)this.style.borderColor='var(--border)'">
+          <input type="radio" name="q_{{ loop.parent.index0 }}" value="{{ loop.index0 }}" required style="accent-color:#059669;">
+          <span style="font-size:14px;">{{ opt }}</span>
+        </label>
+        {% endfor %}
+      </div>
+    </div>
+    {% endfor %}
+
+    <div style="text-align:center; padding:24px;">
+      <button type="submit" class="btn btn-blue" style="min-width:200px; padding:12px 32px; font-size:16px;">
+        Submit Quiz
+      </button>
+    </div>
+  </form>
+</div>
+{% endblock %}

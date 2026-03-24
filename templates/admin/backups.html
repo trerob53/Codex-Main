@@ -1,0 +1,35 @@
+{% extends "base.html" %}
+{% block title %}Backups — Cerasus Hub{% endblock %}
+{% block content %}
+<div class="page-header">
+  <div>
+    <h1 class="page-title">Database Backups</h1>
+    <p class="page-subtitle">Automated and manual database backup management</p>
+  </div>
+  <form method="POST" action="{{ url_for('admin.create_backup') }}">
+    <button type="submit" class="btn btn-blue">+ Create Backup</button>
+  </form>
+</div>
+
+<div class="card" style="padding:20px;">
+  <div style="overflow-x:auto;">
+    <table class="data-table">
+      <thead>
+        <tr><th>Filename</th><th>Size</th><th>Created</th><th>Reason</th></tr>
+      </thead>
+      <tbody>
+        {% for b in backups %}
+        <tr>
+          <td class="font-mono" style="font-size:12px;">{{ b.filename }}</td>
+          <td>{{ b.size_mb }} MB</td>
+          <td style="white-space:nowrap;">{{ b.created_at }}</td>
+          <td><span class="badge badge-info">{{ b.reason or 'manual' }}</span></td>
+        </tr>
+        {% else %}
+        <tr><td colspan="4" style="text-align:center; color:var(--text-light); padding:32px;">No backups found</td></tr>
+        {% endfor %}
+      </tbody>
+    </table>
+  </div>
+</div>
+{% endblock %}

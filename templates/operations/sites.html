@@ -1,0 +1,203 @@
+{% extends "operations/_layout.html" %}
+{% block page_title %}Sites{% endblock %}
+{% block breadcrumb_tail %}
+<span class="sep">&#8250;</span><span class="current">Sites</span>
+{% endblock %}
+
+{% block page_content %}
+<div class="page-header">
+  <div>
+    <h1 class="page-title">Sites</h1>
+    <p class="page-subtitle">Manage client sites and locations</p>
+  </div>
+  <button class="btn btn-blue" onclick="document.getElementById('createSiteModal').style.display='flex'">+ New Site</button>
+</div>
+
+<!-- Filters -->
+<div class="filter-bar">
+  <form method="get" style="display:flex;gap:8px;align-items:center;flex-wrap:wrap;width:100%;">
+    <input type="text" name="q" value="{{ q }}" placeholder="Search sites..." class="filter-search">
+    <button type="submit" class="btn btn-blue btn-sm">Search</button>
+    {% if q %}
+    <a href="{{ url_for('operations.sites') }}" class="btn btn-secondary btn-sm">Clear</a>
+    {% endif %}
+  </form>
+</div>
+
+<div style="margin:8px 0;color:var(--text-light);font-size:13px;">{{ sites|length }} site{{ 's' if sites|length != 1 else '' }}</div>
+
+<!-- Sites Table -->
+<table class="data-table">
+  <thead>
+    <tr>
+      <th>Name</th>
+      <th>Address</th>
+      <th>City</th>
+      <th>State</th>
+      <th>Contact</th>
+      <th>Phone</th>
+      <th>Status</th>
+      <th>Actions</th>
+    </tr>
+  </thead>
+  <tbody>
+    {% for site in sites %}
+    <tr>
+      <td><strong>{{ site.name or '—' }}</strong></td>
+      <td>{{ site.address or '—' }}</td>
+      <td>{{ site.city or '—' }}</td>
+      <td>{{ site.state or '—' }}</td>
+      <td>{{ site.contact_name or '—' }}</td>
+      <td>{{ site.contact_phone or '—' }}</td>
+      <td>
+        {% if site.status == 'Active' %}
+        <span class="badge badge-success">Active</span>
+        {% else %}
+        <span class="badge badge-danger">{{ site.status }}</span>
+        {% endif %}
+      </td>
+      <td style="white-space:nowrap;">
+        <button class="btn btn-secondary btn-sm"
+          onclick="openEditSite({{ site|tojson|forceescape }})">Edit</button>
+      </td>
+    </tr>
+    {% endfor %}
+    {% if not sites %}
+    <tr><td colspan="8" style="text-align:center;color:var(--text-light);padding:32px;">No sites found.</td></tr>
+    {% endif %}
+  </tbody>
+</table>
+
+<!-- Create Site Modal -->
+<div id="createSiteModal" class="modal-overlay" style="display:none;">
+  <div class="modal-card" style="max-width:520px;">
+    <h2 class="section-title">New Site</h2>
+    <form method="post" action="{{ url_for('operations.sites_create') }}">
+      <div style="display:grid;grid-template-columns:1fr 1fr;gap:12px;">
+        <div style="grid-column:span 2;">
+          <label class="form-label">Site Name</label>
+          <input type="text" name="name" class="form-input" required>
+        </div>
+        <div style="grid-column:span 2;">
+          <label class="form-label">Address</label>
+          <input type="text" name="address" class="form-input">
+        </div>
+        <div>
+          <label class="form-label">City</label>
+          <input type="text" name="city" class="form-input">
+        </div>
+        <div>
+          <label class="form-label">State</label>
+          <input type="text" name="state" class="form-input">
+        </div>
+        <div>
+          <label class="form-label">ZIP</label>
+          <input type="text" name="zip" class="form-input">
+        </div>
+        <div>
+          <label class="form-label">Status</label>
+          <select name="status" class="form-input">
+            <option>Active</option>
+            <option>Inactive</option>
+          </select>
+        </div>
+        <div>
+          <label class="form-label">Contact Name</label>
+          <input type="text" name="contact_name" class="form-input">
+        </div>
+        <div>
+          <label class="form-label">Contact Phone</label>
+          <input type="text" name="contact_phone" class="form-input">
+        </div>
+        <div style="grid-column:span 2;">
+          <label class="form-label">Contact Email</label>
+          <input type="email" name="contact_email" class="form-input">
+        </div>
+      </div>
+      <div style="margin-top:12px;">
+        <label class="form-label">Notes</label>
+        <textarea name="notes" class="form-input" rows="2"></textarea>
+      </div>
+      <div style="margin-top:16px;display:flex;gap:8px;justify-content:flex-end;">
+        <button type="button" class="btn btn-secondary" onclick="this.closest('.modal-overlay').style.display='none'">Cancel</button>
+        <button type="submit" class="btn btn-blue">Create Site</button>
+      </div>
+    </form>
+  </div>
+</div>
+
+<!-- Edit Site Modal -->
+<div id="editSiteModal" class="modal-overlay" style="display:none;">
+  <div class="modal-card" style="max-width:520px;">
+    <h2 class="section-title">Edit Site</h2>
+    <form method="post" id="editSiteForm">
+      <div style="display:grid;grid-template-columns:1fr 1fr;gap:12px;">
+        <div style="grid-column:span 2;">
+          <label class="form-label">Site Name</label>
+          <input type="text" name="name" id="editSiteName" class="form-input" required>
+        </div>
+        <div style="grid-column:span 2;">
+          <label class="form-label">Address</label>
+          <input type="text" name="address" id="editSiteAddress" class="form-input">
+        </div>
+        <div>
+          <label class="form-label">City</label>
+          <input type="text" name="city" id="editSiteCity" class="form-input">
+        </div>
+        <div>
+          <label class="form-label">State</label>
+          <input type="text" name="state" id="editSiteState" class="form-input">
+        </div>
+        <div>
+          <label class="form-label">ZIP</label>
+          <input type="text" name="zip" id="editSiteZip" class="form-input">
+        </div>
+        <div>
+          <label class="form-label">Status</label>
+          <select name="status" id="editSiteStatus" class="form-input">
+            <option>Active</option>
+            <option>Inactive</option>
+          </select>
+        </div>
+        <div>
+          <label class="form-label">Contact Name</label>
+          <input type="text" name="contact_name" id="editSiteContactName" class="form-input">
+        </div>
+        <div>
+          <label class="form-label">Contact Phone</label>
+          <input type="text" name="contact_phone" id="editSiteContactPhone" class="form-input">
+        </div>
+        <div style="grid-column:span 2;">
+          <label class="form-label">Contact Email</label>
+          <input type="email" name="contact_email" id="editSiteContactEmail" class="form-input">
+        </div>
+      </div>
+      <div style="margin-top:12px;">
+        <label class="form-label">Notes</label>
+        <textarea name="notes" id="editSiteNotes" class="form-input" rows="2"></textarea>
+      </div>
+      <div style="margin-top:16px;display:flex;gap:8px;justify-content:flex-end;">
+        <button type="button" class="btn btn-secondary" onclick="this.closest('.modal-overlay').style.display='none'">Cancel</button>
+        <button type="submit" class="btn btn-blue">Save Changes</button>
+      </div>
+    </form>
+  </div>
+</div>
+
+<script>
+function openEditSite(site) {
+  document.getElementById('editSiteForm').action = '/module/operations/sites/' + (site.site_id || site.id) + '/edit';
+  document.getElementById('editSiteName').value = site.name || '';
+  document.getElementById('editSiteAddress').value = site.address || '';
+  document.getElementById('editSiteCity').value = site.city || '';
+  document.getElementById('editSiteState').value = site.state || '';
+  document.getElementById('editSiteZip').value = site.zip || '';
+  document.getElementById('editSiteStatus').value = site.status || 'Active';
+  document.getElementById('editSiteContactName').value = site.contact_name || '';
+  document.getElementById('editSiteContactPhone').value = site.contact_phone || '';
+  document.getElementById('editSiteContactEmail').value = site.contact_email || '';
+  document.getElementById('editSiteNotes').value = site.notes || '';
+  document.getElementById('editSiteModal').style.display = 'flex';
+}
+</script>
+{% endblock %}

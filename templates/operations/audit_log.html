@@ -1,0 +1,58 @@
+{% extends "operations/_layout.html" %}
+{% block page_title %}Audit Log{% endblock %}
+{% block breadcrumb_tail %}
+<span class="sep">&#8250;</span><span class="current">Audit Log</span>
+{% endblock %}
+
+{% block page_content %}
+<div class="page-header">
+  <div>
+    <h1 class="page-title">Audit Log</h1>
+    <p class="page-subtitle">All operations module activity (last 500 entries)</p>
+  </div>
+</div>
+
+<div style="margin:8px 0;color:var(--text-light);font-size:13px;">{{ entries|length }} entr{{ 'ies' if entries|length != 1 else 'y' }}</div>
+
+<div style="overflow-x:auto;">
+<table class="data-table">
+  <thead>
+    <tr>
+      <th>Timestamp</th>
+      <th>User</th>
+      <th>Event</th>
+      <th>Action</th>
+      <th>Table</th>
+      <th>Record ID</th>
+      <th>Details</th>
+    </tr>
+  </thead>
+  <tbody>
+    {% for e in entries %}
+    <tr>
+      <td style="white-space:nowrap;font-size:12px;">{{ e.timestamp or '—' }}</td>
+      <td><strong>{{ e.username or '—' }}</strong></td>
+      <td>
+        {% if e.event_type == 'create' %}
+        <span class="badge badge-success">{{ e.event_type }}</span>
+        {% elif e.event_type == 'delete' %}
+        <span class="badge badge-danger">{{ e.event_type }}</span>
+        {% elif e.event_type == 'update' %}
+        <span class="badge badge-blue">{{ e.event_type }}</span>
+        {% else %}
+        <span class="badge badge-info">{{ e.event_type }}</span>
+        {% endif %}
+      </td>
+      <td>{{ e.action or '—' }}</td>
+      <td style="font-size:12px;">{{ e.table_name or '—' }}</td>
+      <td style="font-size:12px;font-family:monospace;">{{ e.record_id or '—' }}</td>
+      <td style="max-width:300px;overflow:hidden;text-overflow:ellipsis;font-size:12px;">{{ e.details or '—' }}</td>
+    </tr>
+    {% endfor %}
+    {% if not entries %}
+    <tr><td colspan="7" style="text-align:center;color:var(--text-light);padding:32px;">No audit entries found.</td></tr>
+    {% endif %}
+  </tbody>
+</table>
+</div>
+{% endblock %}

@@ -1,0 +1,259 @@
+{% extends "operations/_layout.html" %}
+{% block page_title %}Open Positions{% endblock %}
+{% block breadcrumb_tail %}
+<span class="sep">&#8250;</span><span class="current">Open Positions</span>
+{% endblock %}
+
+{% block page_content %}
+<div class="page-header">
+  <div>
+    <h1 class="page-title">Open Positions</h1>
+    <p class="page-subtitle">Hiring pipeline and position tracker</p>
+  </div>
+  <button class="btn btn-blue" onclick="document.getElementById('createPositionModal').style.display='flex'">+ New Position</button>
+</div>
+
+<!-- KPI Cards -->
+<div class="stat-cards">
+  <div class="stat-card">
+    <div class="stat-card-label">Open Positions</div>
+    <div class="stat-card-value">{{ kpis.total_open }}</div>
+  </div>
+  <div class="stat-card">
+    <div class="stat-card-label">Open Hours</div>
+    <div class="stat-card-value">{{ kpis.total_hours }}</div>
+  </div>
+  <div class="stat-card">
+    <div class="stat-card-label">OT Cost Exposure</div>
+    <div class="stat-card-value">${{ "%.2f"|format(kpis.ot_cost_exposure) }}</div>
+  </div>
+  <div class="stat-card">
+    <div class="stat-card-label">Avg Days to Fill</div>
+    <div class="stat-card-value">{{ kpis.avg_days_to_fill }}</div>
+  </div>
+</div>
+
+<!-- Filters -->
+<div class="filter-bar">
+  <form method="get" style="display:flex;gap:8px;align-items:center;flex-wrap:wrap;width:100%;">
+    <select name="site" class="filter-select" onchange="this.form.submit()">
+      <option value="">All Sites</option>
+      {% for s in sites %}
+      <option value="{{ s }}" {% if site_filter == s %}selected{% endif %}>{{ s }}</option>
+      {% endfor %}
+    </select>
+    <select name="stage" class="filter-select" onchange="this.form.submit()">
+      <option value="">All Stages</option>
+      {% for p in pipeline %}
+      <option value="{{ p }}" {% if stage_filter == p %}selected{% endif %}>{{ p }}</option>
+      {% endfor %}
+    </select>
+    <label style="display:flex;align-items:center;gap:4px;font-size:13px;color:var(--text-light);">
+      <input type="checkbox" name="include_filled" value="1" {% if include_filled %}checked{% endif %} onchange="this.form.submit()">
+      Include Filled
+    </label>
+    {% if site_filter or stage_filter or include_filled %}
+    <a href="{{ url_for('operations.open_positions') }}" class="btn btn-secondary btn-sm">Clear</a>
+    {% endif %}
+  </form>
+</div>
+
+<div style="margin:8px 0;color:var(--text-light);font-size:13px;">{{ positions|length }} position{{ 's' if positions|length != 1 else '' }}</div>
+
+<!-- Positions Table -->
+<table class="data-table">
+  <thead>
+    <tr>
+      <th>Site</th>
+      <th>Title</th>
+      <th>Shift</th>
+      <th>Pay Rate</th>
+      <th>Hours</th>
+      <th>Stage</th>
+      <th>Date Opened</th>
+      <th>Actions</th>
+    </tr>
+  </thead>
+  <tbody>
+    {% for pos in positions %}
+    <tr>
+      <td><strong>{{ pos.site_name or '—' }}</strong></td>
+      <td>{{ pos.position_title or '—' }}</td>
+      <td>{{ pos.shift or '—' }}</td>
+      <td>${{ pos.pay_rate or '0.00' }}</td>
+      <td>{{ pos.total_hours or '0' }}</td>
+      <td>
+        {% if pos.pipeline_stage == 'Filled' %}
+        <span class="badge badge-success">Filled</span>
+        {% elif pos.pipeline_stage == 'Open' %}
+        <span class="badge badge-warning">Open</span>
+        {% else %}
+        <span class="badge badge-blue">{{ pos.pipeline_stage }}</span>
+        {% endif %}
+      </td>
+      <td>{{ pos.date_opened or '—' }}</td>
+      <td style="white-space:nowrap;">
+        <form method="post" action="{{ url_for('operations.open_positions_advance', position_id=pos.position_id) }}" style="display:inline-flex;gap:4px;">
+          <select name="new_stage" class="filter-select" style="width:140px;font-size:12px;">
+            {% for p in pipeline %}
+            {% if p != pos.pipeline_stage %}
+            <option value="{{ p }}">{{ p }}</option>
+            {% endif %}
+            {% endfor %}
+          </select>
+          <button type="submit" class="btn btn-accent btn-sm">Move</button>
+        </form>
+        <button type="button" class="btn btn-secondary btn-sm" onclick="openEditModal('{{ pos.position_id }}')">Edit</button>
+        <form method="post" action="{{ url_for('operations.open_positions_delete', position_id=pos.position_id) }}" style="display:inline;" onsubmit="return confirm('Delete this position?')">
+          <button type="submit" class="btn btn-danger btn-sm">Del</button>
+        </form>
+      </td>
+    </tr>
+    {% endfor %}
+    {% if not positions %}
+    <tr><td colspan="8" style="text-align:center;color:var(--text-light);padding:32px;">No positions found.</td></tr>
+    {% endif %}
+  </tbody>
+</table>
+
+<!-- Create Position Modal -->
+<div id="createPositionModal" class="modal-overlay" style="display:none;">
+  <div class="modal-card" style="max-width:600px;">
+    <h2 class="section-title">New Position</h2>
+    <form method="post" action="{{ url_for('operations.open_positions_create') }}">
+      <div style="display:grid;grid-template-columns:1fr 1fr;gap:12px;">
+        <div>
+          <label class="form-label">Site</label>
+          <select name="site_name" class="form-input" required>
+            <option value="">Select site</option>
+            {% for s in sites %}
+            <option value="{{ s }}">{{ s }}</option>
+            {% endfor %}
+          </select>
+        </div>
+        <div>
+          <label class="form-label">Position Title</label>
+          <input type="text" name="position_title" class="form-input" required>
+        </div>
+        <div>
+          <label class="form-label">Shift</label>
+          <input type="text" name="shift" class="form-input" placeholder="e.g. Day, Night, Swing">
+        </div>
+        <div>
+          <label class="form-label">Pay Rate</label>
+          <input type="text" name="pay_rate" class="form-input" placeholder="0.00">
+        </div>
+        <div>
+          <label class="form-label">Total Hours/Week</label>
+          <input type="text" name="total_hours" class="form-input" placeholder="40">
+        </div>
+      </div>
+      <div class="section-title" style="margin-top:16px;font-size:13px;">Schedule (enter shifts as HH:MM-HH:MM or OFF)</div>
+      <div style="display:grid;grid-template-columns:repeat(7, 1fr);gap:6px;">
+        {% for day in ['sunday','monday','tuesday','wednesday','thursday','friday','saturday'] %}
+        <div>
+          <label class="form-label" style="font-size:11px;">{{ day[:3]|capitalize }}</label>
+          <input type="text" name="{{ day }}" class="form-input" value="OFF" style="font-size:12px;padding:4px;">
+        </div>
+        {% endfor %}
+      </div>
+      <div style="margin-top:12px;">
+        <label class="form-label">Notes</label>
+        <textarea name="notes" class="form-input" rows="2"></textarea>
+      </div>
+      <div style="margin-top:16px;display:flex;gap:8px;justify-content:flex-end;">
+        <button type="button" class="btn btn-secondary" onclick="this.closest('.modal-overlay').style.display='none'">Cancel</button>
+        <button type="submit" class="btn btn-blue">Create Position</button>
+      </div>
+    </form>
+  </div>
+</div>
+
+<!-- Edit Position Modal -->
+<div id="editPositionModal" class="modal-overlay" style="display:none;">
+  <div class="modal-card" style="max-width:600px;">
+    <h2 class="section-title">Edit Position</h2>
+    <form method="post" id="editPositionForm">
+      <div style="display:grid;grid-template-columns:1fr 1fr;gap:12px;">
+        <div>
+          <label class="form-label">Site</label>
+          <select name="site_name" id="edit-site_name" class="form-input" required>
+            <option value="">Select site</option>
+            {% for s in sites %}
+            <option value="{{ s }}">{{ s }}</option>
+            {% endfor %}
+          </select>
+        </div>
+        <div>
+          <label class="form-label">Position Title</label>
+          <input type="text" name="position_title" id="edit-position_title" class="form-input" required>
+        </div>
+        <div>
+          <label class="form-label">Shift</label>
+          <input type="text" name="shift" id="edit-shift" class="form-input">
+        </div>
+        <div>
+          <label class="form-label">Pay Rate</label>
+          <input type="text" name="pay_rate" id="edit-pay_rate" class="form-input">
+        </div>
+        <div>
+          <label class="form-label">Total Hours/Week</label>
+          <input type="text" name="total_hours" id="edit-total_hours" class="form-input">
+        </div>
+      </div>
+      <div class="section-title" style="margin-top:16px;font-size:13px;">Schedule</div>
+      <div style="display:grid;grid-template-columns:repeat(7, 1fr);gap:6px;">
+        {% for day in ['sunday','monday','tuesday','wednesday','thursday','friday','saturday'] %}
+        <div>
+          <label class="form-label" style="font-size:11px;">{{ day[:3]|capitalize }}</label>
+          <input type="text" name="{{ day }}" id="edit-{{ day }}" class="form-input" style="font-size:12px;padding:4px;">
+        </div>
+        {% endfor %}
+      </div>
+      <div style="margin-top:12px;">
+        <label class="form-label">Notes</label>
+        <textarea name="notes" id="edit-notes" class="form-input" rows="2"></textarea>
+      </div>
+      <div style="margin-top:16px;display:flex;gap:8px;justify-content:flex-end;">
+        <button type="button" class="btn btn-secondary" onclick="this.closest('.modal-overlay').style.display='none'">Cancel</button>
+        <button type="submit" class="btn btn-blue">Save Changes</button>
+      </div>
+    </form>
+  </div>
+</div>
+
+<script>
+var positionsData = {
+  {% for pos in positions %}
+  '{{ pos.position_id }}': {
+    site_name: '{{ pos.site_name|e }}',
+    position_title: '{{ pos.position_title|e }}',
+    shift: '{{ pos.shift|e }}',
+    pay_rate: '{{ pos.pay_rate|e }}',
+    total_hours: '{{ pos.total_hours|e }}',
+    sunday: '{{ pos.sunday|e }}',
+    monday: '{{ pos.monday|e }}',
+    tuesday: '{{ pos.tuesday|e }}',
+    wednesday: '{{ pos.wednesday|e }}',
+    thursday: '{{ pos.thursday|e }}',
+    friday: '{{ pos.friday|e }}',
+    saturday: '{{ pos.saturday|e }}',
+    notes: '{{ pos.notes|e }}'
+  },
+  {% endfor %}
+};
+
+function openEditModal(pid) {
+  var d = positionsData[pid];
+  if (!d) return;
+  document.getElementById('editPositionForm').action = '/module/operations/open-positions/' + pid + '/edit';
+  var fields = ['site_name','position_title','shift','pay_rate','total_hours',
+                'sunday','monday','tuesday','wednesday','thursday','friday','saturday','notes'];
+  fields.forEach(function(f) {
+    var el = document.getElementById('edit-' + f);
+    if (el) el.value = d[f] || '';
+  });
+  document.getElementById('editPositionModal').style.display = 'flex';
+}
+</script>
+{% endblock %}

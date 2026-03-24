@@ -1,0 +1,111 @@
+{% extends "base.html" %}
+{% block title %}Bulk Import — Attendance — Cerasus Hub{% endblock %}
+
+{% block tabs %}
+<div class="module-tabs">
+  <a href="{{ url_for('attendance.dashboard') }}" class="module-tab {{ 'active' if active_tab == 'dashboard' }}">Dashboard</a>
+  <a href="{{ url_for('attendance.roster') }}" class="module-tab {{ 'active' if active_tab == 'roster' }}">Roster</a>
+  <a href="{{ url_for('attendance.sites') }}" class="module-tab {{ 'active' if active_tab == 'sites' }}">Sites</a>
+  <a href="{{ url_for('attendance.log_infraction') }}" class="module-tab {{ 'active' if active_tab == 'log' }}">Log Infraction</a>
+  <a href="{{ url_for('attendance.discipline') }}" class="module-tab {{ 'active' if active_tab == 'discipline' }}">Discipline</a>
+  <a href="{{ url_for('attendance.reviews') }}" class="module-tab {{ 'active' if active_tab == 'reviews' }}">Reviews</a>
+  <a href="{{ url_for('attendance.reports') }}" class="module-tab {{ 'active' if active_tab == 'reports' }}">Reports</a>
+  <a href="{{ url_for('attendance.analytics') }}" class="module-tab {{ 'active' if active_tab == 'analytics' }}">Analytics</a>
+</div>
+{% endblock %}
+
+{% block content %}
+<div class="page-header">
+  <div>
+    <h1 class="page-title">Bulk Import Infractions</h1>
+    <p class="page-subtitle">Upload a CSV file to bulk-import attendance infractions</p>
+  </div>
+</div>
+
+<div class="card" style="max-width:700px; margin-top:16px; padding:24px;">
+  <form method="POST" action="{{ url_for('attendance.bulk_import') }}" enctype="multipart/form-data">
+    <div style="margin-bottom:16px;">
+      <label class="form-label" for="csv_file">CSV File</label>
+      <input type="file" name="csv_file" id="csv_file" class="form-input" accept=".csv" required>
+    </div>
+
+    <div style="margin-bottom:20px; padding:14px; background:#F9FAFB; border-radius:8px; border:1px solid #E5E7EB;">
+      <div style="font-weight:600; font-size:13px; margin-bottom:8px;">Supported Formats</div>
+
+      <div style="margin-bottom:12px;">
+        <div style="font-weight:600; font-size:12px; color:var(--blue); margin-bottom:4px;">TrackTik Export (Auto-detected)</div>
+        <div style="font-size:12px; color:var(--text-light);">
+          Columns: <code>Attendance Issue:Employee</code>, <code>Attendance Issue:Infraction Type</code>,
+          <code>Attendance Issue:Scheduled Shift Date</code>, <code>Attendance Issue:Site</code>, etc.
+        </div>
+        <div style="font-size:12px; color:var(--text-light); margin-top:4px;">
+          Smart 1st/additional logic is applied automatically:
+        </div>
+        <ul style="font-size:12px; color:var(--text-light); margin:4px 0 0 16px; padding:0;">
+          <li>Tardiness: 1st per person = 0 pts, additional = 1.5 pts</li>
+          <li>Call-off with proper notice: 1st per person = 0 pts, additional = 2 pts</li>
+          <li>Short notice call-offs (&lt;4hr, &lt;2hr): Always get points</li>
+          <li>No call/no show: 1st = 6 pts, 2nd = termination flag</li>
+        </ul>
+        <div style="font-size:12px; color:var(--text-light); margin-top:4px;">
+          Employees are matched by name. Unmatched names are reported as skipped.
+        </div>
+      </div>
+
+      <div style="border-top:1px solid #E5E7EB; padding-top:12px;">
+        <div style="font-weight:600; font-size:12px; color:var(--blue); margin-bottom:4px;">Simple Format</div>
+        <div style="font-size:12px; color:var(--text-light); font-family:monospace;">
+          employee_id, infraction_type, infraction_date, points_assigned, site, description
+        </div>
+      </div>
+    </div>
+
+    <button type="submit" class="btn btn-blue">Upload &amp; Import</button>
+  </form>
+</div>
+
+{% if result %}
+<div class="card" style="max-width:700px; margin-top:20px; padding:24px;">
+  <div class="section-title">Import Results</div>
+  <div style="display:grid; grid-template-columns:1fr 1fr 1fr; gap:12px; margin-top:12px;">
+    <div style="text-align:center; padding:12px; background:#D1FAE5; border-radius:8px;">
+      <div style="font-size:24px; font-weight:700; color:#059669;">{{ result.imported }}</div>
+      <div style="font-size:12px; color:#065F46;">Imported</div>
+    </div>
+    <div style="text-align:center; padding:12px; background:#FEF3C7; border-radius:8px;">
+      <div style="font-size:24px; font-weight:700; color:#D97706;">{{ result.skipped }}</div>
+      <div style="font-size:12px; color:#92400E;">Skipped</div>
+    </div>
+    <div style="text-align:center; padding:12px; background:#FDE8EB; border-radius:8px;">
+      <div style="font-size:24px; font-weight:700; color:#DC2626;">{{ result.errors|length }}</div>
+      <div style="font-size:12px; color:#991B1B;">Errors</div>
+    </div>
+  </div>
+
+  {% if result.not_found %}
+  <div style="margin-top:16px; padding:14px; background:#FEF3C7; border-radius:8px; border:1px solid #FDE68A;">
+    <div style="font-weight:600; font-size:13px; margin-bottom:6px; color:#92400E;">Employees Not Found ({{ result.not_found|length }})</div>
+    <div style="font-size:13px; color:#78350F;">
+      These names from the CSV did not match any officer in the system. Their infractions were skipped.
+    </div>
+    <ul style="font-size:13px; color:#78350F; margin:8px 0 0; padding-left:20px;">
+      {% for name in result.not_found %}
+      <li>{{ name }}</li>
+      {% endfor %}
+    </ul>
+  </div>
+  {% endif %}
+
+  {% if result.errors %}
+  <div style="margin-top:16px;">
+    <div style="font-weight:600; font-size:13px; margin-bottom:6px;">Errors:</div>
+    <ul style="font-size:13px; color:#DC2626; margin:0; padding-left:20px;">
+      {% for err in result.errors %}
+      <li>{{ err }}</li>
+      {% endfor %}
+    </ul>
+  </div>
+  {% endif %}
+</div>
+{% endif %}
+{% endblock %}

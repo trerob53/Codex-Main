@@ -1,0 +1,125 @@
+{% extends "operations/_layout.html" %}
+{% block page_title %}Handoff Notes{% endblock %}
+{% block breadcrumb_tail %}
+<span class="sep">&#8250;</span><span class="current">Handoff Notes</span>
+{% endblock %}
+
+{% block page_content %}
+<div class="page-header">
+  <div>
+    <h1 class="page-title">Handoff Notes</h1>
+    <p class="page-subtitle">Shift-to-shift communication and pass-down notes</p>
+  </div>
+  {% if site_filter %}
+  <button class="btn btn-blue" onclick="document.getElementById('createNoteModal').style.display='flex'">+ New Note</button>
+  {% endif %}
+</div>
+
+<!-- Site Filter -->
+<div class="filter-bar">
+  <form method="get" style="display:flex;gap:8px;align-items:center;flex-wrap:wrap;width:100%;">
+    <select name="site" class="filter-select" onchange="this.form.submit()">
+      <option value="">Select a site...</option>
+      {% for s in sites %}
+      <option value="{{ s }}" {% if site_filter == s %}selected{% endif %}>{{ s }}</option>
+      {% endfor %}
+    </select>
+    {% if site_filter %}
+    <a href="{{ url_for('operations.handoff_notes') }}" class="btn btn-secondary btn-sm">Clear</a>
+    {% endif %}
+  </form>
+</div>
+
+{% if not site_filter %}
+<div class="card" style="text-align:center;padding:48px;color:var(--text-light);">
+  Select a site above to view handoff notes for the last 14 days.
+</div>
+{% else %}
+
+<div style="margin:8px 0;color:var(--text-light);font-size:13px;">{{ notes|length }} note{{ 's' if notes|length != 1 else '' }} for {{ site_filter }} (last 14 days)</div>
+
+{% for note in notes %}
+<div class="card" style="margin-bottom:12px;border-left:4px solid {% if note.priority == 'high' %}#DC2626{% elif note.priority == 'urgent' %}#D97706{% else %}#2563EB{% endif %};">
+  <div style="display:flex;justify-content:space-between;align-items:flex-start;margin-bottom:8px;">
+    <div>
+      <strong>{{ note.shift_date or '—' }}</strong>
+      {% if note.shift_type %}
+      <span class="badge badge-blue" style="margin-left:6px;">{{ note.shift_type }}</span>
+      {% endif %}
+      {% if note.priority == 'high' %}
+      <span class="badge badge-danger" style="margin-left:4px;">High</span>
+      {% elif note.priority == 'urgent' %}
+      <span class="badge badge-warning" style="margin-left:4px;">Urgent</span>
+      {% endif %}
+    </div>
+    <div style="font-size:12px;color:var(--text-light);">by {{ note.author or 'unknown' }}</div>
+  </div>
+  <div style="white-space:pre-wrap;font-size:14px;line-height:1.5;">{{ note.content }}</div>
+  <div style="margin-top:12px;display:flex;justify-content:space-between;align-items:center;">
+    <div style="font-size:11px;color:var(--text-light);">
+      {% if note.acknowledged_by %}
+      Acknowledged by {{ note.acknowledged_by }} at {{ note.acknowledged_at }}
+      {% else %}
+      <form method="post" action="{{ url_for('operations.handoff_notes_ack', note_id=note.note_id) }}" style="display:inline;">
+        <input type="hidden" name="site" value="{{ site_filter }}">
+        <button type="submit" class="btn btn-accent btn-sm">Acknowledge</button>
+      </form>
+      {% endif %}
+    </div>
+    <div style="font-size:11px;color:var(--text-light);">{{ note.created_at }}</div>
+  </div>
+</div>
+{% endfor %}
+
+{% if not notes %}
+<div class="card" style="text-align:center;padding:48px;color:var(--text-light);">
+  No handoff notes for {{ site_filter }} in the last 14 days.
+</div>
+{% endif %}
+
+{% endif %}
+
+<!-- Create Note Modal -->
+<div id="createNoteModal" class="modal-overlay" style="display:none;">
+  <div class="modal-card" style="max-width:520px;">
+    <h2 class="section-title">New Handoff Note</h2>
+    <form method="post" action="{{ url_for('operations.handoff_notes_create') }}">
+      <div style="display:grid;grid-template-columns:1fr 1fr;gap:12px;">
+        <div>
+          <label class="form-label">Site</label>
+          <input type="text" name="site" class="form-input" value="{{ site_filter }}" readonly>
+        </div>
+        <div>
+          <label class="form-label">Shift Date</label>
+          <input type="date" name="shift_date" class="form-input" required>
+        </div>
+        <div>
+          <label class="form-label">Shift Type</label>
+          <select name="shift_type" class="form-input">
+            <option>Day</option>
+            <option>Swing</option>
+            <option>Night</option>
+            <option>Graveyard</option>
+          </select>
+        </div>
+        <div>
+          <label class="form-label">Priority</label>
+          <select name="priority" class="form-input">
+            <option value="normal">Normal</option>
+            <option value="high">High</option>
+            <option value="urgent">Urgent</option>
+          </select>
+        </div>
+      </div>
+      <div style="margin-top:12px;">
+        <label class="form-label">Content</label>
+        <textarea name="content" class="form-input" rows="6" required placeholder="Enter handoff notes..."></textarea>
+      </div>
+      <div style="margin-top:16px;display:flex;gap:8px;justify-content:flex-end;">
+        <button type="button" class="btn btn-secondary" onclick="this.closest('.modal-overlay').style.display='none'">Cancel</button>
+        <button type="submit" class="btn btn-blue">Create Note</button>
+      </div>
+    </form>
+  </div>
+</div>
+{% endblock %}

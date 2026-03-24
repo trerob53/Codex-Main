@@ -1,0 +1,117 @@
+{% extends "training/base_training.html" %}
+{% block title %}Build: {{ simulation.title }} — Training Portal{% endblock %}
+
+{% block content %}
+<div style="display:flex; justify-content:space-between; align-items:center; margin-bottom:4px;">
+  <h1 class="trn-page-title">{{ simulation.title }}</h1>
+  <a href="{{ url_for('training.manage_simulations') }}" class="trn-btn trn-btn-secondary trn-btn-sm">&larr; Back</a>
+</div>
+<p class="trn-page-subtitle">Simulation Builder &mdash; Create decision-based scenarios</p>
+
+<form method="post" id="sim-form">
+  <!-- Sim Details -->
+  <div class="trn-card" style="padding:20px; margin-bottom:20px;">
+    <div style="display:grid;grid-template-columns:1fr 1fr;gap:12px;">
+      <div class="trn-form-group"><label class="trn-form-label">Title</label>
+        <input type="text" class="trn-form-input" name="title" value="{{ simulation.title }}" required></div>
+      <div class="trn-form-group"><label class="trn-form-label">Category</label>
+        <select class="trn-select" name="category" style="width:100%;">
+          {% for c in ['General','Safety','Customer Service','Emergency Response','Access Control','Patrol'] %}
+          <option {% if simulation.category == c %}selected{% endif %}>{{ c }}</option>
+          {% endfor %}
+        </select></div>
+      <div class="trn-form-group"><label class="trn-form-label">Description</label>
+        <textarea class="trn-form-input" name="description" rows="2" style="resize:vertical;">{{ simulation.description or '' }}</textarea></div>
+      <div style="display:grid;grid-template-columns:1fr 1fr;gap:12px;">
+        <div class="trn-form-group"><label class="trn-form-label">Duration</label>
+          <input type="text" class="trn-form-input" name="duration" value="{{ simulation.duration or '' }}" placeholder="e.g. 15 min"></div>
+        <div class="trn-form-group"><label class="trn-form-label">Status</label>
+          <select class="trn-select" name="status" style="width:100%;">
+            <option {% if simulation.status == 'Draft' %}selected{% endif %}>Draft</option>
+            <option {% if simulation.status == 'Published' %}selected{% endif %}>Published</option>
+          </select></div>
+      </div>
+    </div>
+  </div>
+
+  <!-- Scenarios -->
+  <div style="display:flex;justify-content:space-between;align-items:center;margin-bottom:12px;">
+    <h2 style="font-size:18px;font-weight:700;color:var(--trn-text);">Scenarios</h2>
+    <button type="button" class="trn-btn trn-btn-primary trn-btn-sm" onclick="addScenario()">+ Add Scenario</button>
+  </div>
+
+  <div id="scenarios-container"></div>
+
+  <div style="display:flex;gap:8px;justify-content:flex-end;margin-top:20px;">
+    <button type="submit" class="trn-btn trn-btn-primary">Save Simulation</button>
+  </div>
+</form>
+
+<style>
+.scenario-card { background:var(--trn-card); border:1px solid var(--trn-card-border); border-radius:8px; padding:20px; margin-bottom:16px; }
+.option-row { display:grid; grid-template-columns:1fr 80px 1fr 40px; gap:8px; align-items:center; margin-bottom:6px; }
+.option-row input, .option-row textarea { font-size:13px; }
+</style>
+
+<script>
+var scenarioCount = 0;
+
+function addScenario(data) {
+  var idx = scenarioCount++;
+  var s = data || { situation: '', options: [{ text: '', points: 10, feedback: '' }, { text: '', points: 0, feedback: '' }] };
+
+  var html = '<div class="scenario-card" id="sc-' + idx + '">';
+  html += '<div style="display:flex;justify-content:space-between;align-items:center;margin-bottom:12px;">';
+  html += '<strong>Scenario ' + (idx + 1) + '</strong>';
+  html += '<button type="button" class="trn-btn trn-btn-sm" style="background:rgba(232,23,23,0.15);color:var(--trn-accent-light);border:none;" onclick="this.closest(\'.scenario-card\').remove()">Remove</button>';
+  html += '</div>';
+  html += '<div class="trn-form-group"><label class="trn-form-label">Situation</label>';
+  html += '<textarea class="trn-form-input" name="s_' + idx + '_situation" rows="3" placeholder="Describe the scenario the officer faces..." style="resize:vertical;">' + escHtml(s.situation) + '</textarea></div>';
+
+  html += '<label class="trn-form-label" style="margin-top:8px;">Response Options</label>';
+  html += '<div style="display:grid;grid-template-columns:1fr 60px 1fr 32px;gap:6px;font-size:11px;font-weight:600;color:var(--trn-text-muted);margin-bottom:4px;">';
+  html += '<span>Option</span><span>Points</span><span>Feedback</span><span></span></div>';
+  html += '<div id="opts-' + idx + '">';
+
+  (s.options || []).forEach(function(opt, oi) {
+    html += buildOptionRow(idx, oi, opt);
+  });
+
+  html += '</div>';
+  html += '<button type="button" class="trn-btn trn-btn-secondary trn-btn-sm" style="margin-top:6px;" onclick="addOption(' + idx + ')">+ Option</button>';
+  html += '</div>';
+
+  document.getElementById('scenarios-container').insertAdjacentHTML('beforeend', html);
+}
+
+var optCounts = {};
+function buildOptionRow(sIdx, oIdx, opt) {
+  opt = opt || { text: '', points: 0, feedback: '' };
+  optCounts[sIdx] = Math.max(optCounts[sIdx] || 0, oIdx + 1);
+  return '<div class="option-row">'
+    + '<input type="text" class="trn-form-input" name="s_' + sIdx + '_opt_' + oIdx + '" placeholder="Response option" value="' + escHtml(opt.text) + '">'
+    + '<input type="number" class="trn-form-input" name="s_' + sIdx + '_pts_' + oIdx + '" value="' + (opt.points || 0) + '" min="-10" max="100" style="text-align:center;">'
+    + '<input type="text" class="trn-form-input" name="s_' + sIdx + '_fb_' + oIdx + '" placeholder="Feedback shown after selection" value="' + escHtml(opt.feedback || '') + '">'
+    + '<button type="button" style="background:none;border:none;color:var(--trn-accent-light);cursor:pointer;font-size:16px;" onclick="this.closest(\'.option-row\').remove()">&times;</button>'
+    + '</div>';
+}
+
+function addOption(sIdx) {
+  var next = optCounts[sIdx] || 0;
+  optCounts[sIdx] = next + 1;
+  document.getElementById('opts-' + sIdx).insertAdjacentHTML('beforeend', buildOptionRow(sIdx, next, null));
+}
+
+function escHtml(s) {
+  return String(s || '').replace(/&/g,'&amp;').replace(/"/g,'&quot;').replace(/</g,'&lt;').replace(/>/g,'&gt;');
+}
+
+// Load existing scenarios
+{% for sc in simulation.scenarios %}
+addScenario({{ sc|tojson }});
+{% endfor %}
+
+// If no scenarios, start with one empty
+if (scenarioCount === 0) addScenario();
+</script>
+{% endblock %}

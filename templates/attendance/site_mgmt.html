@@ -1,0 +1,118 @@
+{% extends "base.html" %}
+{% block title %}Site Management — Attendance — Cerasus Hub{% endblock %}
+
+{% block tabs %}
+<div class="module-tabs">
+  <a href="{{ url_for('attendance.dashboard') }}" class="module-tab {{ 'active' if active_tab == 'dashboard' }}">Dashboard</a>
+  <a href="{{ url_for('attendance.roster') }}" class="module-tab {{ 'active' if active_tab == 'roster' }}">Roster</a>
+  <a href="{{ url_for('attendance.sites') }}" class="module-tab {{ 'active' if active_tab == 'sites' }}">Sites</a>
+  <a href="{{ url_for('attendance.log_infraction') }}" class="module-tab {{ 'active' if active_tab == 'log' }}">Log Infraction</a>
+  <a href="{{ url_for('attendance.discipline') }}" class="module-tab {{ 'active' if active_tab == 'discipline' }}">Discipline</a>
+  <a href="{{ url_for('attendance.reviews') }}" class="module-tab {{ 'active' if active_tab == 'reviews' }}">Reviews</a>
+  <a href="{{ url_for('attendance.reports') }}" class="module-tab {{ 'active' if active_tab == 'reports' }}">Reports</a>
+  <a href="{{ url_for('attendance.analytics') }}" class="module-tab {{ 'active' if active_tab == 'analytics' }}">Analytics</a>
+</div>
+{% endblock %}
+
+{% block content %}
+<div class="page-header">
+  <div>
+    <h1 class="page-title">Site Management</h1>
+    <p class="page-subtitle">Add, edit, and manage site locations</p>
+  </div>
+  <div>
+    <button class="btn btn-blue" onclick="document.getElementById('addModal').style.display='flex'">+ Add Site</button>
+  </div>
+</div>
+
+<div class="card" style="margin-top:16px;">
+  <table class="data-table">
+    <thead>
+      <tr>
+        <th>Site ID</th>
+        <th>Name</th>
+        <th>Address</th>
+        <th>Actions</th>
+      </tr>
+    </thead>
+    <tbody>
+      {% for site in sites_list %}
+      <tr>
+        <td>{{ site.site_id or site.id or '' }}</td>
+        <td style="font-weight:600;">{{ site.name }}</td>
+        <td>{{ site.address or '—' }}</td>
+        <td style="white-space:nowrap;">
+          <button class="btn btn-secondary btn-sm" onclick="openEditSite('{{ site.site_id or site.id or '' }}', '{{ site.name }}', '{{ site.address or '' }}')">Edit</button>
+          <form method="POST" action="{{ url_for('attendance.site_management') }}" style="display:inline;" onsubmit="return confirm('Delete this site?');">
+            <input type="hidden" name="_action" value="delete">
+            <input type="hidden" name="site_id" value="{{ site.site_id or site.id or '' }}">
+            <button type="submit" class="btn btn-danger btn-sm">Delete</button>
+          </form>
+        </td>
+      </tr>
+      {% else %}
+      <tr>
+        <td colspan="4" style="text-align:center; color:var(--text-light); padding:24px;">No sites configured.</td>
+      </tr>
+      {% endfor %}
+    </tbody>
+  </table>
+</div>
+
+<!-- Add Site Modal -->
+<div id="addModal" class="modal-overlay" style="display:none;">
+  <div class="modal-card" style="max-width:440px;">
+    <h3 style="margin:0 0 16px;">Add Site</h3>
+    <form method="POST" action="{{ url_for('attendance.site_management') }}">
+      <input type="hidden" name="_action" value="create">
+      <div style="margin-bottom:12px;">
+        <label class="form-label">Site Name *</label>
+        <input type="text" name="name" class="form-input" required placeholder="e.g., Downtown HQ">
+      </div>
+      <div style="margin-bottom:16px;">
+        <label class="form-label">Address</label>
+        <input type="text" name="address" class="form-input" placeholder="Optional address">
+      </div>
+      <div style="display:flex; gap:12px; justify-content:flex-end;">
+        <button type="button" class="btn btn-secondary" onclick="document.getElementById('addModal').style.display='none'">Cancel</button>
+        <button type="submit" class="btn btn-blue">Add Site</button>
+      </div>
+    </form>
+  </div>
+</div>
+
+<!-- Edit Site Modal -->
+<div id="editSiteModal" class="modal-overlay" style="display:none;">
+  <div class="modal-card" style="max-width:440px;">
+    <h3 style="margin:0 0 16px;">Edit Site</h3>
+    <form method="POST" action="{{ url_for('attendance.site_management') }}">
+      <input type="hidden" name="_action" value="update">
+      <input type="hidden" name="site_id" id="es_site_id">
+      <div style="margin-bottom:12px;">
+        <label class="form-label">Site Name *</label>
+        <input type="text" name="name" id="es_name" class="form-input" required>
+      </div>
+      <div style="margin-bottom:16px;">
+        <label class="form-label">Address</label>
+        <input type="text" name="address" id="es_address" class="form-input">
+      </div>
+      <div style="display:flex; gap:12px; justify-content:flex-end;">
+        <button type="button" class="btn btn-secondary" onclick="document.getElementById('editSiteModal').style.display='none'">Cancel</button>
+        <button type="submit" class="btn btn-blue">Save</button>
+      </div>
+    </form>
+  </div>
+</div>
+
+<script>
+function openEditSite(id, name, address) {
+  document.getElementById('es_site_id').value = id;
+  document.getElementById('es_name').value = name;
+  document.getElementById('es_address').value = address;
+  document.getElementById('editSiteModal').style.display = 'flex';
+}
+document.querySelectorAll('.modal-overlay').forEach(function(m) {
+  m.addEventListener('click', function(e) { if (e.target === this) this.style.display = 'none'; });
+});
+</script>
+{% endblock %}

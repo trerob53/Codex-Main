@@ -1,0 +1,76 @@
+{% extends "base.html" %}
+{% block title %}Import CSV — Attendance — Cerasus Hub{% endblock %}
+
+{% block tabs %}
+<div class="module-tabs">
+  <a href="{{ url_for('attendance.dashboard') }}" class="module-tab {{ 'active' if active_tab == 'dashboard' }}">Dashboard</a>
+  <a href="{{ url_for('attendance.roster') }}" class="module-tab {{ 'active' if active_tab == 'roster' }}">Roster</a>
+  <a href="{{ url_for('attendance.sites') }}" class="module-tab {{ 'active' if active_tab == 'sites' }}">Sites</a>
+  <a href="{{ url_for('attendance.log_infraction') }}" class="module-tab {{ 'active' if active_tab == 'log' }}">Log Infraction</a>
+  <a href="{{ url_for('attendance.discipline') }}" class="module-tab {{ 'active' if active_tab == 'discipline' }}">Discipline</a>
+  <a href="{{ url_for('attendance.reviews') }}" class="module-tab {{ 'active' if active_tab == 'reviews' }}">Reviews</a>
+  <a href="{{ url_for('attendance.reports') }}" class="module-tab {{ 'active' if active_tab == 'reports' }}">Reports</a>
+  <a href="{{ url_for('attendance.analytics') }}" class="module-tab {{ 'active' if active_tab == 'analytics' }}">Analytics</a>
+</div>
+{% endblock %}
+
+{% block content %}
+<div class="page-header">
+  <div>
+    <h1 class="page-title">Import Employees CSV</h1>
+    <p class="page-subtitle">Upload a CSV file to import officers into the roster</p>
+  </div>
+</div>
+
+<div class="card" style="max-width:600px; margin-top:16px; padding:24px;">
+  <form method="POST" action="{{ url_for('attendance.import_csv') }}" enctype="multipart/form-data">
+    <div style="margin-bottom:16px;">
+      <label class="form-label" for="csv_file">CSV File</label>
+      <input type="file" name="csv_file" id="csv_file" class="form-input" accept=".csv" required>
+    </div>
+
+    <div style="margin-bottom:20px; padding:14px; background:#F9FAFB; border-radius:8px; border:1px solid #E5E7EB;">
+      <div style="font-weight:600; font-size:13px; margin-bottom:6px;">Expected CSV Columns</div>
+      <div style="font-size:12px; color:var(--text-light); font-family:monospace;">
+        name, employee_id, site, status, hire_date, phone, email
+      </div>
+      <div style="font-size:12px; color:var(--text-light); margin-top:6px;">
+        The <code>name</code> column is required. Other columns are optional.
+      </div>
+    </div>
+
+    <button type="submit" class="btn btn-blue">Upload &amp; Import</button>
+  </form>
+</div>
+
+{% if result %}
+<div class="card" style="max-width:600px; margin-top:20px; padding:24px;">
+  <div class="section-title">Import Results</div>
+  <div style="display:grid; grid-template-columns:1fr 1fr 1fr; gap:12px; margin-top:12px;">
+    <div style="text-align:center; padding:12px; background:#D1FAE5; border-radius:8px;">
+      <div style="font-size:24px; font-weight:700; color:#059669;">{{ result.imported }}</div>
+      <div style="font-size:12px; color:#065F46;">Imported</div>
+    </div>
+    <div style="text-align:center; padding:12px; background:#FEF3C7; border-radius:8px;">
+      <div style="font-size:24px; font-weight:700; color:#D97706;">{{ result.skipped }}</div>
+      <div style="font-size:12px; color:#92400E;">Skipped</div>
+    </div>
+    <div style="text-align:center; padding:12px; background:#FDE8EB; border-radius:8px;">
+      <div style="font-size:24px; font-weight:700; color:#DC2626;">{{ result.errors|length }}</div>
+      <div style="font-size:12px; color:#991B1B;">Errors</div>
+    </div>
+  </div>
+
+  {% if result.errors %}
+  <div style="margin-top:16px;">
+    <div style="font-weight:600; font-size:13px; margin-bottom:6px;">Errors:</div>
+    <ul style="font-size:13px; color:#DC2626; margin:0; padding-left:20px;">
+      {% for err in result.errors %}
+      <li>{{ err }}</li>
+      {% endfor %}
+    </ul>
+  </div>
+  {% endif %}
+</div>
+{% endif %}
+{% endblock %}

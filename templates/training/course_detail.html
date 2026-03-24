@@ -1,0 +1,126 @@
+{% extends "training/base_training.html" %}
+{% block title %}{{ course.title }} — Training Portal{% endblock %}
+
+{% block content %}
+<div class="trn-course-layout" style="margin:-28px; min-height:calc(100vh - var(--trn-topbar-height));">
+
+  <!-- Left: Chapter Sidebar -->
+  <div class="trn-chapter-sidebar">
+    <div class="trn-chapter-header">
+      <a href="{{ url_for('training.my_courses') }}" class="trn-chapter-back">
+        &#8592; Back to Courses
+      </a>
+      <div class="trn-chapter-course-title">{{ course.title }}</div>
+      <div class="trn-chapter-progress-text">{{ progress.completed }} of {{ progress.total_chapters }} chapters complete</div>
+      <div class="trn-progress-bar" style="margin-top:8px;">
+        <div class="trn-progress-bar-fill red" style="width:{{ progress.percent|int }}%;"></div>
+      </div>
+    </div>
+
+    <!-- Module headers and chapter items -->
+    {% if modules %}
+      {% for mod in modules %}
+      <div class="trn-module-header">
+        <span>&#9654;</span> {{ mod.title }}
+      </div>
+      {% set mod_chapters = module_chapters.get(mod.module_id, []) %}
+      {% for ch in mod_chapters %}
+      {% set done = ch.chapter_id in completed_ids %}
+      <a href="{{ url_for('training.chapter_view', course_id=course.course_id, chapter_id=ch.chapter_id) }}"
+         class="trn-chapter-item {{ 'completed' if done }} {{ 'active' if chapter and chapter.chapter_id == ch.chapter_id }}">
+        <span class="trn-chapter-check">
+          {% if done %}&#10003;{% else %}&#9675;{% endif %}
+        </span>
+        {{ ch.title }}
+      </a>
+      {% endfor %}
+      {% endfor %}
+    {% endif %}
+
+    {% if orphan_chapters %}
+      <div class="trn-module-header">
+        <span>&#9654;</span> Chapters
+      </div>
+      {% for ch in orphan_chapters %}
+      {% set done = ch.chapter_id in completed_ids %}
+      <a href="{{ url_for('training.chapter_view', course_id=course.course_id, chapter_id=ch.chapter_id) }}"
+         class="trn-chapter-item {{ 'completed' if done }} {{ 'active' if chapter and chapter.chapter_id == ch.chapter_id }}">
+        <span class="trn-chapter-check">
+          {% if done %}&#10003;{% else %}&#9675;{% endif %}
+        </span>
+        {{ ch.title }}
+      </a>
+      {% endfor %}
+    {% endif %}
+  </div>
+
+  <!-- Right: Content Viewer -->
+  <div class="trn-content-viewer">
+    {% if chapter %}
+    <h1>{{ chapter.title }}</h1>
+
+    <div class="trn-content-box">
+      {% if chapter.content_html %}
+        {{ chapter.content_html|safe }}
+      {% elif chapter.content %}
+        {{ chapter.content }}
+      {% else %}
+        <p style="color:var(--trn-text-muted);">No content available for this chapter.</p>
+      {% endif %}
+    </div>
+
+    <!-- Navigation Buttons -->
+    <div class="trn-content-nav">
+      <div>
+        {% if prev_chapter %}
+        <a href="{{ url_for('training.chapter_view', course_id=course.course_id, chapter_id=prev_chapter.chapter_id) }}"
+           class="trn-btn trn-btn-secondary">
+          &#8592; Previous
+        </a>
+        {% endif %}
+      </div>
+      <div style="display:flex; gap:8px;">
+        {% if not is_completed %}
+        <form method="post" action="{{ url_for('training.mark_complete', course_id=course.course_id, chapter_id=chapter.chapter_id) }}" style="display:inline;">
+          <button type="submit" class="trn-btn trn-btn-success">&#10003; Mark Complete</button>
+        </form>
+        {% else %}
+        <span class="trn-btn trn-btn-ghost" style="color:var(--trn-green); cursor:default;">&#10003; Completed</span>
+        {% endif %}
+      </div>
+      <div>
+        {% if next_chapter %}
+        <a href="{{ url_for('training.chapter_view', course_id=course.course_id, chapter_id=next_chapter.chapter_id) }}"
+           class="trn-btn trn-btn-primary">
+          Next &#8594;
+        </a>
+        {% endif %}
+      </div>
+    </div>
+
+    {% if test %}
+    <div class="trn-callout" style="margin-top:24px;">
+      <strong>Quiz Available</strong><br>
+      This chapter has a quiz.
+      {% if best_attempt %}
+        Your best score: <strong>{{ best_attempt.score|round(1) }}%</strong>
+        ({{ 'Passed' if best_attempt.passed else 'Not passed' }}).
+      {% endif %}
+      <div style="margin-top:12px;">
+        <a href="{{ url_for('training.take_quiz', course_id=course.course_id, chapter_id=chapter.chapter_id) }}" class="trn-btn trn-btn-primary trn-btn-sm">
+          {% if best_attempt %}Retake Quiz{% else %}Start Quiz{% endif %}
+        </a>
+      </div>
+    </div>
+    {% endif %}
+
+    {% else %}
+    <!-- No chapter selected - show course overview -->
+    <h1>{{ course.title }}</h1>
+    <div class="trn-content-box">
+      <p>{{ course.description or 'Select a chapter from the sidebar to begin.' }}</p>
+    </div>
+    {% endif %}
+  </div>
+</div>
+{% endblock %}

@@ -1,0 +1,95 @@
+{% extends "operations/_layout.html" %}
+{% block page_title %}Dashboard{% endblock %}
+{% block breadcrumb_tail %}
+<span class="sep">&#8250;</span><span class="current">Dashboard</span>
+{% endblock %}
+
+{% block page_content %}
+<div class="page-header">
+  <div>
+    <h1 class="page-title">Operations Dashboard</h1>
+    <p class="page-subtitle">Overview of flex operations, assignments, and coverage</p>
+  </div>
+</div>
+
+<!-- KPI Cards -->
+<div class="stat-cards">
+  <div class="stat-card">
+    <div class="stat-card-label">Active Officers</div>
+    <div class="stat-card-value">{{ summary.active_officers }}</div>
+  </div>
+  <div class="stat-card">
+    <div class="stat-card-label">Active Sites</div>
+    <div class="stat-card-value">{{ summary.active_sites }}</div>
+  </div>
+  <div class="stat-card">
+    <div class="stat-card-label">Total Assignments</div>
+    <div class="stat-card-value">{{ summary.total_assignments }}</div>
+  </div>
+  <div class="stat-card">
+    <div class="stat-card-label">Scheduled</div>
+    <div class="stat-card-value">{{ summary.scheduled_assignments }}</div>
+  </div>
+  <div class="stat-card">
+    <div class="stat-card-label">Open Records</div>
+    <div class="stat-card-value">{{ summary.record_counts.get('Open', 0) }}</div>
+  </div>
+  <div class="stat-card">
+    <div class="stat-card-label">Total PTO</div>
+    <div class="stat-card-value">{{ summary.total_pto }}</div>
+  </div>
+</div>
+
+<!-- Request Stats -->
+<div class="section-title" style="margin-top:24px;">Coverage Requests</div>
+<div class="stat-cards">
+  <div class="stat-card">
+    <div class="stat-card-label">Open Requests</div>
+    <div class="stat-card-value" style="color:#DC2626;">{{ req_summary.open }}</div>
+  </div>
+  <div class="stat-card">
+    <div class="stat-card-label">Urgent</div>
+    <div class="stat-card-value" style="color:#D97706;">{{ req_summary.urgent }}</div>
+  </div>
+  <div class="stat-card">
+    <div class="stat-card-label">Filled Today</div>
+    <div class="stat-card-value" style="color:#059669;">{{ req_summary.filled_today }}</div>
+  </div>
+  <div class="stat-card">
+    <div class="stat-card-label">Fill Rate</div>
+    <div class="stat-card-value">{{ req_summary.fill_rate }}%</div>
+  </div>
+</div>
+
+<!-- Positions Stats -->
+<div class="section-title" style="margin-top:24px;">Open Positions</div>
+<div class="stat-cards">
+  <div class="stat-card">
+    <div class="stat-card-label">Open Positions</div>
+    <div class="stat-card-value">{{ pos_kpis.total_open }}</div>
+  </div>
+  <div class="stat-card">
+    <div class="stat-card-label">Open Hours</div>
+    <div class="stat-card-value">{{ pos_kpis.total_hours }}</div>
+  </div>
+  <div class="stat-card">
+    <div class="stat-card-label">OT Cost Exposure</div>
+    <div class="stat-card-value">${{ "%.2f"|format(pos_kpis.ot_cost_exposure) }}</div>
+  </div>
+  <div class="stat-card">
+    <div class="stat-card-label">Avg Days to Fill</div>
+    <div class="stat-card-value">{{ pos_kpis.avg_days_to_fill }}</div>
+  </div>
+</div>
+
+<!-- Quick Links -->
+<div class="section-title" style="margin-top:24px;">Quick Actions</div>
+<div style="display:flex;gap:12px;flex-wrap:wrap;">
+  <a href="{{ url_for('operations.flex_board') }}" class="btn btn-blue">Flex Board</a>
+  <a href="{{ url_for('operations.open_requests') }}" class="btn btn-accent">Open Requests</a>
+  <a href="{{ url_for('operations.coverage_map') }}" class="btn btn-secondary">Coverage Map</a>
+  <a href="{{ url_for('operations.weekly_view') }}" class="btn btn-secondary">Weekly View</a>
+  <a href="{{ url_for('operations.officers') }}" class="btn btn-secondary">Officers</a>
+  <a href="{{ url_for('operations.incidents') }}" class="btn btn-secondary">Incidents</a>
+</div>
+{% endblock %}

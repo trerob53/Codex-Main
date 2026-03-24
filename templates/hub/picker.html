@@ -1,0 +1,102 @@
+{% extends "base.html" %}
+{% block title %}Hub — Cerasus Management Hub{% endblock %}
+{% block breadcrumb %}{% endblock %}
+{% block content %}
+<div class="page-header">
+  <div>
+    <h1 class="page-title">Welcome back, {{ current_user.display_name if current_user else 'User' }}</h1>
+    <p class="page-subtitle">Cerasus Management Hub &mdash; {{ current_date }}</p>
+  </div>
+</div>
+
+<!-- KPI Stat Cards -->
+<div class="stat-cards" id="dashboard-kpis">
+  {% set kpi_ids = ['kpi-officers', 'kpi-reviews', 'kpi-lowstock', 'kpi-requests'] %}
+  {% for kpi in kpis %}
+  <div class="stat-card">
+    <div>
+      <div class="stat-card-label">{{ kpi.label }}</div>
+      <div class="stat-card-value" id="{{ kpi_ids[loop.index0] }}">{{ kpi.value }}</div>
+    </div>
+    <div class="stat-card-icon" style="background:{{ kpi.bg }}; color:{{ kpi.color }};">
+      {{ kpi.icon|safe }}
+    </div>
+  </div>
+  {% endfor %}
+</div>
+
+<!-- Recent Activity Table -->
+<div class="card" style="padding:20px; margin-bottom:24px;">
+  <div style="display:flex; justify-content:space-between; align-items:center; margin-bottom:16px;">
+    <h2 class="section-title" style="margin:0;">Recent Activity</h2>
+    <a href="{{ url_for('hub.activity') }}" style="color:var(--blue); font-size:13px; font-weight:600; text-decoration:none;">
+      View all &#8594;
+    </a>
+  </div>
+  <table class="data-table">
+    <thead>
+      <tr><th>User</th><th>Module</th><th>Action</th><th>Details</th><th>Time</th></tr>
+    </thead>
+    <tbody>
+      {% for e in recent_events[:5] %}
+      <tr>
+        <td style="font-weight:600;">{{ e.username }}</td>
+        <td>{{ e.module_name or '—' }}</td>
+        <td>{{ e.action }}</td>
+        <td class="text-light" style="max-width:300px; overflow:hidden; text-overflow:ellipsis; white-space:nowrap;">{{ e.details or '—' }}</td>
+        <td class="text-light" style="white-space:nowrap; font-size:12px;">{{ e.timestamp|friendly_time }}</td>
+      </tr>
+      {% else %}
+      <tr><td colspan="5" style="text-align:center; color:var(--text-light); padding:24px;">No recent activity</td></tr>
+      {% endfor %}
+    </tbody>
+  </table>
+</div>
+
+<!-- Available Modules -->
+<div style="margin-bottom:24px;">
+  <h2 class="section-title" style="margin-bottom:16px;">Available Modules</h2>
+  <div class="module-grid">
+    {% for mod in visible_modules %}
+    <a href="{{ url_for('modules.module_index', module_id=mod.module_id) }}" class="module-card card-hover">
+      <div class="module-card-icon" style="background:{{ mod.bg }}; color:{{ mod.color }};">
+        {{ mod.icon|safe }}
+      </div>
+      <div class="module-card-title">{{ mod.name }}</div>
+      <div class="module-card-desc">{{ mod.description }}</div>
+      <div class="module-card-footer">
+        <span class="badge badge-success">Active</span>
+        <span class="module-card-arrow">&#8594;</span>
+      </div>
+    </a>
+    {% endfor %}
+  </div>
+</div>
+
+<!-- Administration (admin only) -->
+{% if current_user and current_user.role == 'admin' %}
+<div>
+  <h2 class="section-title" style="margin-bottom:16px;">Administration</h2>
+  <div class="module-grid">
+    <a href="{{ url_for('admin.users') }}" class="module-card card-hover">
+      <div class="module-card-icon" style="background:var(--danger-light); color:var(--danger);">&#128272;</div>
+      <div class="module-card-title">Admin Panel</div>
+      <div class="module-card-desc">Users, sites, system settings, audit log, and email lists</div>
+      <div class="module-card-footer">
+        <span class="badge badge-danger">Admin Only</span>
+        <span class="module-card-arrow">&#8594;</span>
+      </div>
+    </a>
+  </div>
+</div>
+{% endif %}
+
+<!-- Online Users -->
+<div class="card" style="padding:14px 20px; margin-top:24px;">
+  <div id="online-bar" hx-get="{{ url_for('api.online_users_bar') }}" hx-trigger="load, every 30s" hx-swap="innerHTML"
+       style="display:flex; align-items:center; gap:10px; font-size:13px;">
+    <span class="online-dot"></span>
+    <span>Checking...</span>
+  </div>
+</div>
+{% endblock %}

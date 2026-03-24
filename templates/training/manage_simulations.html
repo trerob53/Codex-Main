@@ -1,0 +1,81 @@
+{% extends "training/base_training.html" %}
+{% block title %}Manage Simulations — Training Portal{% endblock %}
+
+{% block content %}
+<h1 class="trn-page-title">Manage Simulations</h1>
+<p class="trn-page-subtitle">Create and manage scenario-based training exercises</p>
+
+<div style="display:flex; justify-content:flex-end; margin-bottom:16px;">
+  <button class="trn-btn trn-btn-primary" onclick="document.getElementById('create-sim-modal').style.display='flex'">+ New Simulation</button>
+</div>
+
+{% if simulations %}
+<div class="trn-card" style="padding:0; overflow:hidden;">
+  <table class="trn-table">
+    <thead><tr><th>Title</th><th>Category</th><th>Scenarios</th><th>Status</th><th>Actions</th></tr></thead>
+    <tbody>
+      {% for sim in simulations %}
+      <tr>
+        <td style="font-weight:600;">{{ sim.title }}</td>
+        <td><span class="trn-badge">{{ sim.category or 'General' }}</span></td>
+        <td>{{ sim.scenarios|length }}</td>
+        <td>
+          {% if sim.status == 'Published' %}<span class="trn-badge" style="background:rgba(34,197,94,0.15); color:var(--trn-green);">Published</span>
+          {% else %}<span class="trn-badge" style="background:rgba(234,179,8,0.15); color:var(--trn-yellow);">Draft</span>{% endif %}
+        </td>
+        <td>
+          <div style="display:flex;gap:6px;">
+            <a href="{{ url_for('training.simulation_builder', sim_id=sim.sim_id) }}" class="trn-btn trn-btn-primary trn-btn-sm">Build</a>
+            <form method="post" style="display:inline;" onsubmit="return confirm('Delete this simulation?')">
+              <input type="hidden" name="action" value="delete">
+              <input type="hidden" name="sim_id" value="{{ sim.sim_id }}">
+              <button type="submit" class="trn-btn trn-btn-sm" style="background:rgba(232,23,23,0.15); color:var(--trn-accent-light); border:none;">Delete</button>
+            </form>
+          </div>
+        </td>
+      </tr>
+      {% endfor %}
+    </tbody>
+  </table>
+</div>
+{% else %}
+<div class="trn-card" style="padding:48px; text-align:center;">
+  <div style="font-size:36px; margin-bottom:12px;">&#128187;</div>
+  <div style="font-size:16px; font-weight:600; color:var(--trn-text);">No simulations yet</div>
+  <div style="font-size:13px; color:var(--trn-text-secondary);">Create your first simulation to get started.</div>
+</div>
+{% endif %}
+
+<!-- Create Simulation Modal -->
+<div id="create-sim-modal" style="display:none; position:fixed; inset:0; background:rgba(0,0,0,0.6); z-index:300; align-items:center; justify-content:center;">
+  <div class="trn-card" style="width:480px; max-width:92vw; padding:24px;">
+    <h3 style="margin-bottom:16px;">New Simulation</h3>
+    <form method="post">
+      <input type="hidden" name="action" value="create">
+      <div class="trn-form-group"><label class="trn-form-label">Title</label>
+        <input type="text" class="trn-form-input" name="title" required placeholder="Simulation title"></div>
+      <div class="trn-form-group"><label class="trn-form-label">Description</label>
+        <textarea class="trn-form-input" name="description" rows="3" placeholder="What will the officer learn?" style="resize:vertical;"></textarea></div>
+      <div style="display:grid;grid-template-columns:1fr 1fr;gap:12px;">
+        <div class="trn-form-group"><label class="trn-form-label">Category</label>
+          <select class="trn-select" name="category" style="width:100%;">
+            <option>General</option><option>Safety</option><option>Customer Service</option>
+            <option>Emergency Response</option><option>Access Control</option><option>Patrol</option>
+          </select></div>
+        <div class="trn-form-group"><label class="trn-form-label">Est. Duration</label>
+          <input type="text" class="trn-form-input" name="duration" placeholder="e.g. 15 min"></div>
+      </div>
+      <div style="display:flex;gap:8px;justify-content:flex-end;margin-top:16px;">
+        <button type="button" class="trn-btn trn-btn-secondary" onclick="this.closest('[id]').style.display='none'">Cancel</button>
+        <button type="submit" class="trn-btn trn-btn-primary">Create</button>
+      </div>
+    </form>
+  </div>
+</div>
+
+<script>
+document.getElementById('create-sim-modal').addEventListener('click', function(e) {
+  if (e.target === this) this.style.display = 'none';
+});
+</script>
+{% endblock %}

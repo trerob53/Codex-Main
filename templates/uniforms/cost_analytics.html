@@ -1,0 +1,150 @@
+{% extends "base.html" %}
+{% block title %}Cost Analytics — Uniforms — Cerasus Hub{% endblock %}
+
+{% block tabs %}
+<div class="module-tabs">
+  {% for section_title, section_items in sidebar_sections %}
+    {% for label, endpoint in section_items %}
+    <a href="{{ url_for(endpoint) }}" class="module-tab {{ 'active' if active_tab == label else '' }}">{{ label }}</a>
+    {% endfor %}
+  {% endfor %}
+</div>
+{% endblock %}
+
+{% block content %}
+<div class="page-header">
+  <div>
+    <h1 class="page-title">Cost Analytics</h1>
+    <p class="page-subtitle">Uniform spending analysis and cost breakdowns</p>
+  </div>
+  <div>
+    <form method="get" style="display:flex; gap:8px; align-items:center;">
+      <select name="site" class="filter-select" onchange="this.form.submit()">
+        <option value="All Sites">All Sites</option>
+        {% for s in sites %}
+        <option {{ 'selected' if site_filter == s else '' }}>{{ s }}</option>
+        {% endfor %}
+      </select>
+    </form>
+  </div>
+</div>
+
+<!-- KPI Cards -->
+<div class="stat-cards">
+  <div class="stat-card">
+    <div class="stat-card-label">Total Spend</div>
+    <div class="stat-card-value">${{ '{:,.2f}'.format(cost_data.total_spend) }}</div>
+  </div>
+  <div class="stat-card">
+    <div class="stat-card-label">Total Issuances</div>
+    <div class="stat-card-value">{{ cost_data.issuance_count }}</div>
+  </div>
+  <div class="stat-card">
+    <div class="stat-card-label">Avg Cost / Issuance</div>
+    <div class="stat-card-value">${{ '{:,.2f}'.format(cost_data.avg_cost_per_issuance) }}</div>
+  </div>
+</div>
+
+<!-- Spend by Category -->
+<div class="card" style="padding:20px; margin-bottom:24px;">
+  <h2 class="section-title" style="margin-bottom:12px;">Spend by Category</h2>
+  <div style="overflow-x:auto;">
+    <table class="data-table">
+      <thead><tr><th>Category</th><th>Total Spend</th><th>% of Total</th></tr></thead>
+      <tbody>
+        {% for cat, amount in cost_data.spend_by_category %}
+        <tr>
+          <td style="font-weight:600;">{{ cat }}</td>
+          <td>${{ '{:,.2f}'.format(amount) }}</td>
+          <td>
+            {% set pct = (amount / cost_data.total_spend * 100) if cost_data.total_spend > 0 else 0 %}
+            <div style="display:flex; align-items:center; gap:8px;">
+              <div style="width:120px; height:8px; background:var(--border); border-radius:4px; overflow:hidden;">
+                <div style="width:{{ pct }}%; height:100%; background:#7C3AED; border-radius:4px;"></div>
+              </div>
+              <span style="font-size:13px;">{{ '{:.1f}'.format(pct) }}%</span>
+            </div>
+          </td>
+        </tr>
+        {% else %}
+        <tr><td colspan="3" style="text-align:center; color:var(--text-light); padding:32px;">No data</td></tr>
+        {% endfor %}
+      </tbody>
+    </table>
+  </div>
+</div>
+
+<!-- Spend by Site -->
+<div class="card" style="padding:20px; margin-bottom:24px;">
+  <h2 class="section-title" style="margin-bottom:12px;">Spend by Site</h2>
+  <div style="overflow-x:auto;">
+    <table class="data-table">
+      <thead><tr><th>Site</th><th>Total Spend</th><th>% of Total</th></tr></thead>
+      <tbody>
+        {% for site, amount in cost_data.spend_by_site %}
+        <tr>
+          <td style="font-weight:600;">{{ site }}</td>
+          <td>${{ '{:,.2f}'.format(amount) }}</td>
+          <td>
+            {% set pct = (amount / cost_data.total_spend * 100) if cost_data.total_spend > 0 else 0 %}
+            <div style="display:flex; align-items:center; gap:8px;">
+              <div style="width:120px; height:8px; background:var(--border); border-radius:4px; overflow:hidden;">
+                <div style="width:{{ pct }}%; height:100%; background:#059669; border-radius:4px;"></div>
+              </div>
+              <span style="font-size:13px;">{{ '{:.1f}'.format(pct) }}%</span>
+            </div>
+          </td>
+        </tr>
+        {% else %}
+        <tr><td colspan="3" style="text-align:center; color:var(--text-light); padding:32px;">No data</td></tr>
+        {% endfor %}
+      </tbody>
+    </table>
+  </div>
+</div>
+
+<!-- Spend by Officer (Top 20) -->
+<div class="card" style="padding:20px; margin-bottom:24px;">
+  <h2 class="section-title" style="margin-bottom:12px;">Top Spend by Officer</h2>
+  <div style="overflow-x:auto;">
+    <table class="data-table">
+      <thead><tr><th>#</th><th>Officer</th><th>Total Spend</th></tr></thead>
+      <tbody>
+        {% for name, amount in cost_data.spend_by_officer[:20] %}
+        <tr>
+          <td style="color:var(--text-light);">{{ loop.index }}</td>
+          <td style="font-weight:600;">{{ name }}</td>
+          <td>${{ '{:,.2f}'.format(amount) }}</td>
+        </tr>
+        {% else %}
+        <tr><td colspan="3" style="text-align:center; color:var(--text-light); padding:32px;">No data</td></tr>
+        {% endfor %}
+      </tbody>
+    </table>
+  </div>
+</div>
+
+<!-- Monthly Trend -->
+{% if cost_data.spend_by_month %}
+<div class="card" style="padding:20px;">
+  <h2 class="section-title" style="margin-bottom:12px;">Monthly Spending Trend</h2>
+  <div style="overflow-x:auto;">
+    <table class="data-table">
+      <thead><tr><th>Month</th><th>Spend</th><th></th></tr></thead>
+      <tbody>
+        {% set max_spend = cost_data.spend_by_month|map(attribute=1)|max if cost_data.spend_by_month else 1 %}
+        {% for month, amount in cost_data.spend_by_month %}
+        <tr>
+          <td style="font-weight:600;">{{ month }}</td>
+          <td>${{ '{:,.2f}'.format(amount) }}</td>
+          <td>
+            <div style="width:{{ (amount / max_spend * 200)|int }}px; height:12px; background:#7C3AED; border-radius:4px; min-width:4px;"></div>
+          </td>
+        </tr>
+        {% endfor %}
+      </tbody>
+    </table>
+  </div>
+</div>
+{% endif %}
+{% endblock %}

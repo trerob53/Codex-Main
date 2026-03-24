@@ -1,0 +1,162 @@
+{% extends "base.html" %}
+{% block title %}DA Options — {{ officer.name }} — Attendance — Cerasus Hub{% endblock %}
+
+{% block tabs %}
+<div class="module-tabs">
+  <a href="{{ url_for('attendance.dashboard') }}" class="module-tab">Dashboard</a>
+  <a href="{{ url_for('attendance.roster') }}" class="module-tab">Roster</a>
+  <a href="{{ url_for('attendance.sites') }}" class="module-tab">Sites</a>
+  <a href="{{ url_for('attendance.log_infraction') }}" class="module-tab">Log Infraction</a>
+  <a href="{{ url_for('attendance.discipline') }}" class="module-tab active">Discipline</a>
+  <a href="{{ url_for('attendance.reviews') }}" class="module-tab">Reviews</a>
+  <a href="{{ url_for('attendance.reports') }}" class="module-tab">Reports</a>
+</div>
+{% endblock %}
+
+{% block content %}
+<div style="margin-bottom:16px;">
+  <a href="{{ url_for('attendance.discipline') }}" style="color:var(--blue); text-decoration:none; font-size:14px;">
+    &larr; Back to Discipline
+  </a>
+</div>
+
+<div class="page-header">
+  <div>
+    <h1 class="page-title">Attendance DA Options</h1>
+    <p class="page-subtitle">Generate disciplinary actions from attendance infractions</p>
+  </div>
+</div>
+
+<!-- Officer Summary -->
+<div class="card" style="padding:20px; margin-bottom:24px;">
+  <div style="display:flex; align-items:center; gap:16px; margin-bottom:16px;">
+    {% set initials = (officer.name.split()[0][:1] + (officer.name.split()[-1][:1] if officer.name.split()|length > 1 else ''))|upper %}
+    <div class="avatar" style="background:#3B82F6; width:48px; height:48px; font-size:18px;">{{ initials }}</div>
+    <div>
+      <div style="font-size:20px; font-weight:700;">{{ officer.name }}</div>
+      <div style="font-size:13px; color:var(--text-light);">
+        {{ officer.job_title or 'Security Officer' }}
+        {% if officer.site %} &middot; {{ officer.site }}{% endif %}
+      </div>
+    </div>
+  </div>
+  <div style="display:grid; grid-template-columns:repeat(3, 1fr); gap:16px;">
+    <div style="text-align:center; padding:12px; background:var(--bg-card); border-radius:8px; border:1px solid var(--border);">
+      <div style="font-size:11px; text-transform:uppercase; color:var(--text-light); letter-spacing:0.5px;">Active Points</div>
+      <div style="font-size:28px; font-weight:800; color:{% if active_points >= 8 %}#DC2626{% elif active_points >= 6 %}#D97706{% elif active_points >= 1.5 %}#3B82F6{% else %}#059669{% endif %};">
+        {{ active_points }}
+      </div>
+    </div>
+    <div style="text-align:center; padding:12px; background:var(--bg-card); border-radius:8px; border:1px solid var(--border);">
+      <div style="font-size:11px; text-transform:uppercase; color:var(--text-light); letter-spacing:0.5px;">Threshold Crossings</div>
+      <div style="font-size:28px; font-weight:800;">{{ crossings|length }}</div>
+    </div>
+    <div style="text-align:center; padding:12px; background:var(--bg-card); border-radius:8px; border:1px solid var(--border);">
+      <div style="font-size:11px; text-transform:uppercase; color:var(--text-light); letter-spacing:0.5px;">Employee ID</div>
+      <div style="font-size:14px; font-weight:600; margin-top:8px;">{{ officer.employee_id or employee_id }}</div>
+    </div>
+  </div>
+</div>
+
+<!-- Threshold Crossings -->
+{% if crossings %}
+{% for c in crossings %}
+{% set colors = {
+  'verbal_warning': ('#3B82F6', '#EFF6FF', '#DBEAFE'),
+  'written_warning': ('#D97706', '#FFFBEB', '#FEF3C7'),
+  'final_warning': ('#7C3AED', '#F5F3FF', '#EDE9FE'),
+  'employment_review': ('#7C3AED', '#F5F3FF', '#EDE9FE'),
+  'termination': ('#DC2626', '#FEF2F2', '#FEE2E2'),
+  'termination_eligible': ('#DC2626', '#FEF2F2', '#FEE2E2'),
+} %}
+{% set accent = colors.get(c.level, ('#6B7280', '#F9FAFB', '#F3F4F6')) %}
+
+<div class="card" style="padding:0; margin-bottom:20px; border-left:4px solid {{ accent[0] }}; overflow:hidden;">
+  <!-- Header -->
+  <div style="padding:16px 20px; background:{{ accent[1] }}; display:flex; justify-content:space-between; align-items:center;">
+    <div>
+      <span style="display:inline-block; background:{{ accent[0] }}; color:white; padding:4px 12px; border-radius:4px; font-size:12px; font-weight:700; letter-spacing:0.5px; text-transform:uppercase;">
+        {{ c.label }}
+      </span>
+      <span style="margin-left:12px; font-size:14px; color:var(--text-light);">
+        Threshold crossed at <strong>{{ c.cumulative_points }} pts</strong> on {{ c.crossing_date }}
+      </span>
+    </div>
+    {% if c.get('review_outcome') %}
+    <span style="font-size:12px; padding:4px 10px; border-radius:4px; background:{{ accent[2] }}; color:{{ accent[0] }};">
+      Review: {{ c.review_outcome|title }}
+    </span>
+    {% endif %}
+  </div>
+
+  <!-- Infraction Table -->
+  <div style="padding:16px 20px;">
+    <div style="font-weight:600; margin-bottom:10px; font-size:14px;">
+      Included Infractions ({{ c.included_infractions|length }})
+    </div>
+    <div style="overflow-x:auto; margin-bottom:16px;">
+      <table class="data-table" style="font-size:13px;">
+        <thead>
+          <tr>
+            <th>Date</th>
+            <th>Type</th>
+            <th>Points</th>
+            <th>Details</th>
+          </tr>
+        </thead>
+        <tbody>
+          {% set ns = namespace(running=0) %}
+          {% for inf in c.included_infractions %}
+          {% set ns.running = ns.running + (inf.points_assigned or 0) %}
+          {% set type_info = infraction_types.get(inf.infraction_type, {}) %}
+          <tr>
+            <td style="white-space:nowrap;">{{ inf.infraction_date }}</td>
+            <td>{{ type_info.get('label', inf.infraction_type|replace("_", " ")|title) }}</td>
+            <td style="font-weight:600;">{{ inf.points_assigned }}</td>
+            <td style="font-size:12px; color:var(--text-light); max-width:400px; overflow:hidden; text-overflow:ellipsis; white-space:nowrap;">
+              {% if inf.description %}
+                {{ inf.description[:120] }}{% if inf.description|length > 120 %}...{% endif %}
+              {% else %}
+                <span style="color:#D97706;">⚠ No details — add shift/timing info</span>
+              {% endif %}
+            </td>
+          </tr>
+          {% endfor %}
+        </tbody>
+      </table>
+    </div>
+
+    <!-- Narrative Preview -->
+    <details style="margin-bottom:16px;">
+      <summary style="cursor:pointer; font-weight:600; font-size:13px; color:var(--blue);">
+        Preview Auto-Generated Narrative
+      </summary>
+      <div style="margin-top:8px; padding:12px; background:var(--bg-main); border-radius:6px; font-size:13px; white-space:pre-wrap; line-height:1.6; border:1px solid var(--border);">{{ c.narrative }}</div>
+    </details>
+
+    <!-- Draft DA Button -->
+    <form method="POST" action="{{ url_for('attendance.create_attendance_da', employee_id=employee_id) }}">
+      <input type="hidden" name="threshold_level" value="{{ c.level }}">
+      <input type="hidden" name="threshold_label" value="{{ c.label }}">
+      <input type="hidden" name="cumulative_points" value="{{ c.cumulative_points }}">
+      <input type="hidden" name="narrative" value="{{ c.narrative }}">
+      <input type="hidden" name="infraction_ids" value="{{ c.included_infractions|map(attribute='id')|join(',') }}">
+      <button type="submit" class="btn btn-blue" style="background:{{ accent[0] }};">
+        &#128196; Draft {{ c.label }} DA
+      </button>
+    </form>
+  </div>
+</div>
+{% endfor %}
+
+{% else %}
+<div class="card" style="padding:40px; text-align:center;">
+  <div style="font-size:48px; margin-bottom:12px;">&#9989;</div>
+  <div style="font-size:18px; font-weight:600; margin-bottom:8px;">No Discipline Thresholds Crossed</div>
+  <div style="color:var(--text-light);">
+    This officer has {{ active_points }} active points. No DA is needed at this time.
+  </div>
+</div>
+{% endif %}
+
+{% endblock %}

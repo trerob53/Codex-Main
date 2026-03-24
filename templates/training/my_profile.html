@@ -1,0 +1,151 @@
+{% extends "base.html" %}
+{% block title %}My Profile — Training — Cerasus Hub{% endblock %}
+
+{% block tabs %}
+<div class="module-tabs">
+  {% for section_title, section_items in sidebar_sections %}
+    {% for label, endpoint in section_items %}
+    <a href="{{ url_for(endpoint) }}" class="module-tab {{ 'active' if active_tab == label else '' }}">{{ label }}</a>
+    {% endfor %}
+  {% endfor %}
+</div>
+{% endblock %}
+
+{% block content %}
+<div class="page-header">
+  <div>
+    <h1 class="page-title">My Training Profile</h1>
+    <p class="page-subtitle">Your personal training progress and achievements</p>
+  </div>
+</div>
+
+<!-- Officer Info Card -->
+{% if officer_info %}
+<div class="card" style="padding:20px; margin-bottom:24px; display:flex; align-items:center; gap:20px;">
+  {% set initials = (officer_info.name.split()[0][:1] + (officer_info.name.split()[-1][:1] if officer_info.name.split()|length > 1 else ''))|upper if officer_info.name else '??' %}
+  <div class="avatar" style="width:64px; height:64px; font-size:24px; background:#059669;">{{ initials }}</div>
+  <div>
+    <div style="font-size:20px; font-weight:700;">{{ officer_info.name or 'Unknown Officer' }}</div>
+    <div style="font-size:14px; color:var(--text-light); margin-top:4px;">
+      {{ officer_info.site or 'No Site Assigned' }}
+      {% if officer_info.position %} &middot; {{ officer_info.position }}{% endif %}
+      {% if officer_info.role %} &middot; <span class="badge badge-info">{{ officer_info.role|title }}</span>{% endif %}
+    </div>
+  </div>
+</div>
+{% endif %}
+
+<!-- Summary Cards (same order as Dashboard) -->
+<div class="stat-cards">
+  <div class="stat-card">
+    <div class="stat-card-label">Courses Available</div>
+    <div class="stat-card-value">{{ summary.courses_available }}</div>
+  </div>
+  <div class="stat-card">
+    <div class="stat-card-label">Courses Completed</div>
+    <div class="stat-card-value" style="color:{{ '#059669' if summary.courses_completed > 0 else 'var(--text-light)' }};">{{ summary.courses_completed }}</div>
+  </div>
+  <div class="stat-card">
+    <div class="stat-card-label">Certificates Earned</div>
+    <div class="stat-card-value">{{ summary.certificates }}</div>
+  </div>
+  <div class="stat-card">
+    <div class="stat-card-label">Test Attempts</div>
+    <div class="stat-card-value">{{ summary.test_attempts }}</div>
+  </div>
+</div>
+
+<!-- Course Progress -->
+<div class="card" style="padding:20px; margin-bottom:24px;">
+  <h2 class="section-title" style="margin-bottom:16px;">Course Progress</h2>
+  {% if course_progress %}
+  <div style="display:grid; gap:12px;">
+    {% for cp in course_progress %}
+    <div style="display:flex; align-items:center; gap:16px; padding:12px; border:1px solid var(--border); border-radius:8px;">
+      <div style="flex:1;">
+        <div style="font-weight:600; margin-bottom:2px;">{{ cp.title }}</div>
+        <div style="font-size:12px; color:var(--text-light);">{{ cp.category or 'General' }}</div>
+      </div>
+      <div style="width:200px;">
+        <div style="display:flex; justify-content:space-between; font-size:12px; margin-bottom:4px;">
+          <span style="color:var(--text-light);">Progress</span>
+          <span style="font-weight:600;">{{ cp.completion_pct|int }}%</span>
+        </div>
+        <div style="height:8px; background:var(--border); border-radius:4px; overflow:hidden;">
+          <div style="width:{{ cp.completion_pct|int }}%; height:100%; background:{{ '#059669' if cp.completion_pct >= 100 else '#3B82F6' }}; border-radius:4px;"></div>
+        </div>
+      </div>
+      <div style="width:90px; text-align:right;">
+        {% if cp.completion_pct >= 100 %}
+        <span class="badge badge-success">Complete</span>
+        {% elif cp.completion_pct > 0 %}
+        <span class="badge badge-blue">In Progress</span>
+        {% else %}
+        <span class="badge" style="background:var(--info-light); color:var(--text-light);">Not Started</span>
+        {% endif %}
+      </div>
+    </div>
+    {% endfor %}
+  </div>
+  {% else %}
+  <div style="text-align:center; padding:24px; color:var(--text-light);">No courses enrolled yet.</div>
+  {% endif %}
+</div>
+
+<!-- Certificates -->
+<div class="card" style="padding:20px; margin-bottom:24px;">
+  <h2 class="section-title" style="margin-bottom:16px;">My Certificates</h2>
+  {% if certificates %}
+  <div style="overflow-x:auto;">
+    <table class="data-table">
+      <thead><tr><th>Course</th><th>Issued</th><th>Expires</th><th>Points</th><th>Status</th></tr></thead>
+      <tbody>
+        {% for cert in certificates %}
+        <tr>
+          <td style="font-weight:600;">{{ cert.course_title or cert.course_id }}</td>
+          <td style="font-size:13px;">{{ cert.issued_date or '—' }}</td>
+          <td style="font-size:13px;">{{ cert.expiry_date or '—' }}</td>
+          <td><span class="badge badge-success">{{ cert.points_earned or 0 }} pts</span></td>
+          <td><span class="badge badge-{{ 'success' if cert.status == 'Active' else 'danger' }}">{{ cert.status or 'Active' }}</span></td>
+        </tr>
+        {% endfor %}
+      </tbody>
+    </table>
+  </div>
+  {% else %}
+  <div style="text-align:center; padding:24px; color:var(--text-light);">No certificates earned yet. Complete courses to earn certificates.</div>
+  {% endif %}
+</div>
+
+<!-- Test Attempts -->
+<div class="card" style="padding:20px;">
+  <h2 class="section-title" style="margin-bottom:16px;">Recent Test Attempts</h2>
+  {% if attempts %}
+  <div style="overflow-x:auto;">
+    <table class="data-table">
+      <thead><tr><th>Test</th><th>Score</th><th>Passed</th><th>Date</th></tr></thead>
+      <tbody>
+        {% for a in attempts[:20] %}
+        <tr>
+          <td style="font-weight:600;">{{ a.test_id }}</td>
+          <td>
+            <span class="badge badge-{{ 'success' if a.score >= 90 else 'blue' if a.score >= 70 else 'danger' }}">{{ a.score|round(1) }}%</span>
+          </td>
+          <td>
+            {% if a.passed %}
+            <span class="badge badge-success">Passed</span>
+            {% else %}
+            <span class="badge badge-danger">Failed</span>
+            {% endif %}
+          </td>
+          <td style="font-size:13px;">{{ a.attempted_at[:19] if a.attempted_at else '—' }}</td>
+        </tr>
+        {% endfor %}
+      </tbody>
+    </table>
+  </div>
+  {% else %}
+  <div style="text-align:center; padding:24px; color:var(--text-light);">No test attempts yet.</div>
+  {% endif %}
+</div>
+{% endblock %}

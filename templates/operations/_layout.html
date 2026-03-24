@@ -1,0 +1,29 @@
+{% extends "base.html" %}
+{% block title %}{% block page_title %}Operations{% endblock %} — Cerasus Hub{% endblock %}
+
+{% block breadcrumb %}
+<div class="breadcrumb-bar">
+  <a href="{{ url_for('hub.picker') }}">Hub</a>
+  <span class="sep">&#8250;</span>
+  <a href="{{ url_for('operations.dashboard') }}">Operations</a>
+  {% block breadcrumb_tail %}{% endblock %}
+</div>
+{% endblock %}
+
+{% block tabs %}
+<div class="module-tabs">
+  {% for section_title, items in sidebar_sections %}
+  {% for label, endpoint, icon in items %}
+  <a href="{{ url_for('operations.' + endpoint) }}"
+     class="module-tab{% if active_page == endpoint %} active{% endif %}"
+     style="{% if active_page == endpoint %}border-color:{{ module_color }};color:{{ module_color }}{% endif %}">
+    <span style="margin-right:4px;">{{ icon|safe }}</span> {{ label }}
+  </a>
+  {% endfor %}
+  {% endfor %}
+</div>
+{% endblock %}
+
+{% block content %}
+{% block page_content %}{% endblock %}
+{% endblock %}

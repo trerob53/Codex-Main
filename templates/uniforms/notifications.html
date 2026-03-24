@@ -1,0 +1,91 @@
+{% extends "base.html" %}
+{% block title %}Notifications — Uniforms — Cerasus Hub{% endblock %}
+
+{% block tabs %}
+<div class="module-tabs">
+  {% for section_title, section_items in sidebar_sections %}
+    {% for label, endpoint in section_items %}
+    <a href="{{ url_for(endpoint) }}" class="module-tab {{ 'active' if active_tab == label else '' }}">{{ label }}</a>
+    {% endfor %}
+  {% endfor %}
+</div>
+{% endblock %}
+
+{% block content %}
+<div class="page-header">
+  <div>
+    <h1 class="page-title">Notification History</h1>
+    <p class="page-subtitle">Email notification send log and delivery status</p>
+  </div>
+</div>
+
+<!-- Stats -->
+<div class="stat-cards">
+  <div class="stat-card">
+    <div class="stat-card-label">Total Sent</div>
+    <div class="stat-card-value">{{ stats.total if stats else 0 }}</div>
+  </div>
+  <div class="stat-card">
+    <div class="stat-card-label">Successful</div>
+    <div class="stat-card-value" style="color:#059669;">{{ stats.success if stats else 0 }}</div>
+  </div>
+  <div class="stat-card">
+    <div class="stat-card-label">Failed</div>
+    <div class="stat-card-value" style="color:#DC2626;">{{ stats.failed if stats else 0 }}</div>
+  </div>
+</div>
+
+<div class="card" style="padding:20px;">
+  <div class="filter-bar" style="margin-bottom:16px;">
+    <div class="filter-search">
+      <span class="filter-search-icon">&#128269;</span>
+      <input type="text" placeholder="Search notifications..." oninput="filterTable(this.value, 'notif-table')">
+    </div>
+  </div>
+
+  <div style="overflow-x:auto;">
+    <table class="data-table" id="notif-table">
+      <thead>
+        <tr>
+          <th>Timestamp</th>
+          <th>To</th>
+          <th>Subject</th>
+          <th>Type</th>
+          <th>Status</th>
+          <th>Triggered By</th>
+        </tr>
+      </thead>
+      <tbody>
+        {% for n in notifications %}
+        <tr>
+          <td style="font-size:13px; white-space:nowrap;">{{ n.timestamp[:19] if n.timestamp else '—' }}</td>
+          <td style="font-size:13px;">{{ n.to_email or '—' }}</td>
+          <td>{{ n.subject or '—' }}</td>
+          <td><span class="badge badge-info">{{ n.email_type or '—' }}</span></td>
+          <td>
+            {% if n.success %}
+            <span class="badge badge-success">Sent</span>
+            {% else %}
+            <span class="badge badge-danger" title="{{ n.error or '' }}">Failed</span>
+            {% endif %}
+          </td>
+          <td style="font-size:13px;">{{ n.triggered_by or '—' }}</td>
+        </tr>
+        {% else %}
+        <tr><td colspan="6" style="text-align:center; color:var(--text-light); padding:32px;">No notifications sent yet</td></tr>
+        {% endfor %}
+      </tbody>
+    </table>
+  </div>
+</div>
+
+<script>
+function filterTable(query, tableId) {
+  var rows = document.getElementById(tableId).querySelectorAll('tbody tr');
+  query = query.toLowerCase();
+  rows.forEach(function(row) {
+    row.style.display = row.textContent.toLowerCase().includes(query) ? '' : 'none';
+  });
+}
+</script>
+{% endblock %}

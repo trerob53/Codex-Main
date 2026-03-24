@@ -1,0 +1,103 @@
+{% extends "training/base_training.html" %}
+{% block title %}Certificates — Training Portal{% endblock %}
+
+{% block content %}
+<h1 class="trn-page-title">Certificates</h1>
+<p class="trn-page-subtitle">All training certificates issued across the organization</p>
+
+<!-- Stat Cards -->
+{% set total_certs = certificates|length %}
+{% set active_certs = certificates|selectattr('status', 'equalto', 'Active')|list|length + certificates|rejectattr('status', 'defined')|list|length %}
+{% set expiring_certs = certificates|selectattr('status', 'equalto', 'Expiring Soon')|list|length %}
+<div class="trn-cert-stats">
+  <div class="trn-cert-stat">
+    <div class="trn-cert-stat-value" style="color:var(--trn-text);">{{ total_certs }}</div>
+    <div class="trn-cert-stat-label">Total Certificates</div>
+  </div>
+  <div class="trn-cert-stat">
+    <div class="trn-cert-stat-value" style="color:var(--trn-green);">{{ active_certs }}</div>
+    <div class="trn-cert-stat-label">Active</div>
+  </div>
+  <div class="trn-cert-stat">
+    <div class="trn-cert-stat-value" style="color:var(--trn-orange);">{{ expiring_certs }}</div>
+    <div class="trn-cert-stat-label">Expiring Soon</div>
+  </div>
+</div>
+
+<!-- Filter Tabs -->
+<div class="trn-filter-tabs">
+  <button class="trn-filter-tab active" onclick="filterCerts('all', this)">All</button>
+  <button class="trn-filter-tab" onclick="filterCerts('Active', this)">Active</button>
+  <button class="trn-filter-tab" onclick="filterCerts('Expiring Soon', this)">Expiring Soon</button>
+  <button class="trn-filter-tab" onclick="filterCerts('Expired', this)">Expired</button>
+</div>
+
+<!-- Certificates Table -->
+{% if certificates %}
+<div class="trn-card" style="padding:0; overflow:hidden;">
+  <table class="trn-table" id="cert-table">
+    <thead>
+      <tr>
+        <th>Officer</th>
+        <th>Course</th>
+        <th>Issued Date</th>
+        <th>Expiry Date</th>
+        <th>Points</th>
+        <th>Status</th>
+      </tr>
+    </thead>
+    <tbody>
+      {% for cert in certificates %}
+      {% set status = cert.status or 'Active' %}
+      <tr data-status="{{ status }}">
+        <td>
+          <div style="display:flex; align-items:center; gap:10px;">
+            {% set name = cert.officer_name or cert.officer_id %}
+            {% set initials = (name.split()[0][:1] + (name.split()[-1][:1] if name.split()|length > 1 else ''))|upper %}
+            <div class="trn-avatar trn-avatar-sm">{{ initials }}</div>
+            <span style="font-weight:600;">{{ name|officer_link }}</span>
+          </div>
+        </td>
+        <td>{{ cert.course_title or cert.course_id }}</td>
+        <td style="color:var(--trn-text-secondary);">{{ cert.issued_date or '--' }}</td>
+        <td style="color:var(--trn-text-secondary);">{{ cert.expiry_date or '--' }}</td>
+        <td><span class="trn-badge" style="background:rgba(34,197,94,0.15); color:var(--trn-green);">{{ cert.points_earned or 0 }} pts</span></td>
+        <td>
+          {% if status == 'Active' %}
+          <span class="trn-badge" style="background:rgba(34,197,94,0.15); color:var(--trn-green);">Active</span>
+          {% elif status == 'Expiring Soon' %}
+          <span class="trn-badge" style="background:rgba(249,115,22,0.15); color:var(--trn-orange);">Expiring Soon</span>
+          {% elif status == 'Expired' %}
+          <span class="trn-badge" style="background:rgba(232,23,23,0.15); color:var(--trn-accent-light);">Expired</span>
+          {% else %}
+          <span class="trn-badge">{{ status }}</span>
+          {% endif %}
+        </td>
+      </tr>
+      {% endfor %}
+    </tbody>
+  </table>
+</div>
+{% else %}
+<div class="trn-empty-state">
+  <div class="trn-empty-state-icon">&#127891;</div>
+  <div class="trn-empty-state-text">No certificates issued yet</div>
+  <div class="trn-empty-state-sub">Complete courses and pass quizzes to earn certificates.</div>
+</div>
+{% endif %}
+
+<script>
+function filterCerts(status, btn) {
+  document.querySelectorAll('.trn-filter-tab').forEach(function(t) { t.classList.remove('active'); });
+  btn.classList.add('active');
+  var rows = document.querySelectorAll('#cert-table tbody tr');
+  rows.forEach(function(row) {
+    if (status === 'all') {
+      row.style.display = '';
+    } else {
+      row.style.display = row.dataset.status === status ? '' : 'none';
+    }
+  });
+}
+</script>
+{% endblock %}

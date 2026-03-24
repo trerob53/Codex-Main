@@ -1,0 +1,110 @@
+{% extends "base.html" %}
+{% block title %}Settings — Uniforms — Cerasus Hub{% endblock %}
+
+{% block tabs %}
+<div class="module-tabs">
+  {% for section_title, section_items in sidebar_sections %}
+    {% for label, endpoint in section_items %}
+    <a href="{{ url_for(endpoint) }}" class="module-tab {{ 'active' if active_tab == label else '' }}">{{ label }}</a>
+    {% endfor %}
+  {% endfor %}
+</div>
+{% endblock %}
+
+{% block content %}
+<div class="page-header">
+  <div>
+    <h1 class="page-title">Settings</h1>
+    <p class="page-subtitle">Manage uniform requirements and catalog configuration</p>
+  </div>
+</div>
+
+<!-- Uniform Requirements -->
+<div class="card" style="padding:24px; margin-bottom:24px;">
+  <h2 class="section-title" style="margin-bottom:16px;">Uniform Requirements by Job Title</h2>
+  <p style="font-size:13px; color:var(--text-light); margin-bottom:16px;">
+    Define which catalog items are required for each job title. These requirements drive the compliance report.
+  </p>
+
+  <!-- Add Requirement Form -->
+  <form method="post" action="{{ url_for('uniforms.settings') }}" style="margin-bottom:20px;">
+    <input type="hidden" name="action" value="add_requirement">
+    <div style="display:flex; gap:10px; flex-wrap:wrap; align-items:end;">
+      <div>
+        <label class="form-label">Job Title</label>
+        <select name="job_title" class="form-input" required>
+          <option value="">Select...</option>
+          {% for jt in job_titles %}
+          <option>{{ jt }}</option>
+          {% endfor %}
+          <option>All Titles</option>
+        </select>
+      </div>
+      <div>
+        <label class="form-label">Catalog Item</label>
+        <select name="item_id" class="form-input" required id="req-item-select" onchange="updateReqItemName()">
+          <option value="">Select...</option>
+          {% for c in catalog %}
+          <option value="{{ c.item_id }}" data-name="{{ c.name }}">{{ c.name }} ({{ c.category }})</option>
+          {% endfor %}
+        </select>
+        <input type="hidden" name="item_name" id="req-item-name-hidden">
+      </div>
+      <div>
+        <label class="form-label">Qty Required</label>
+        <input type="number" name="qty_required" class="form-input" value="1" min="1" max="20" style="width:80px;">
+      </div>
+      <button type="submit" class="btn btn-blue btn-sm">Add Requirement</button>
+    </div>
+  </form>
+
+  <!-- Current Requirements -->
+  <div style="overflow-x:auto;">
+    <table class="data-table">
+      <thead>
+        <tr><th>Job Title</th><th>Item</th><th>Qty Required</th><th>Actions</th></tr>
+      </thead>
+      <tbody>
+        {% for req in requirements %}
+        <tr>
+          <td style="font-weight:600;">{{ req.job_title }}</td>
+          <td>{{ req.item_name }}</td>
+          <td>{{ req.qty_required }}</td>
+          <td>
+            <form method="post" style="display:inline;">
+              <input type="hidden" name="action" value="delete_requirement">
+              <input type="hidden" name="req_id" value="{{ req.id }}">
+              <button type="submit" class="btn btn-sm btn-danger" onclick="return confirm('Remove this requirement?')">Remove</button>
+            </form>
+          </td>
+        </tr>
+        {% else %}
+        <tr><td colspan="4" style="text-align:center; color:var(--text-light); padding:24px;">No requirements configured. Add requirements above to enable compliance tracking.</td></tr>
+        {% endfor %}
+      </tbody>
+    </table>
+  </div>
+</div>
+
+<!-- Catalog Summary -->
+<div class="card" style="padding:24px;">
+  <h2 class="section-title" style="margin-bottom:16px;">Catalog Summary</h2>
+  <p style="font-size:13px; color:var(--text-light); margin-bottom:16px;">
+    {{ catalog|length }} items in catalog across {{ catalog|map(attribute='category')|unique|list|length }} categories.
+  </p>
+  <div style="display:flex; gap:8px; flex-wrap:wrap;">
+    {% set cats = catalog|groupby('category') %}
+    {% for cat_name, items in cats %}
+    <span class="badge badge-info">{{ cat_name }}: {{ items|length }}</span>
+    {% endfor %}
+  </div>
+</div>
+
+<script>
+function updateReqItemName() {
+  var sel = document.getElementById('req-item-select');
+  var opt = sel.options[sel.selectedIndex];
+  document.getElementById('req-item-name-hidden').value = opt.dataset.name || '';
+}
+</script>
+{% endblock %}

@@ -1,0 +1,145 @@
+{% extends "training/base_training.html" %}
+{% block title %}Leaderboard — Training Portal{% endblock %}
+
+{% block content %}
+<h1 class="trn-page-title">Leaderboard</h1>
+<p class="trn-page-subtitle">Top performers ranked by training points</p>
+
+<!-- Toggle: Global / By Site -->
+<div class="trn-toggle-group">
+  <button class="trn-toggle-btn {{ 'active' if not site_filter }}" onclick="window.location='{{ url_for('training.leaderboard') }}'">
+    &#127760; Global
+  </button>
+  <button class="trn-toggle-btn" onclick="document.getElementById('site-select-modal').style.display='flex'" {% if site_filter %}style="background:var(--trn-accent); color:#fff; border-color:var(--trn-accent);"{% endif %}>
+    &#127959; By Site {% if site_filter %}({{ site_filter }}){% endif %}
+  </button>
+</div>
+
+<!-- Hidden site selector -->
+<div id="site-select-modal" style="display:none; gap:12px; margin-bottom:24px;">
+  <form method="get" style="display:flex; gap:8px; align-items:center;">
+    <select name="site" class="trn-select" onchange="this.form.submit()">
+      <option value="">All Sites</option>
+      {% for s in sites %}
+      <option value="{{ s }}" {{ 'selected' if site_filter == s else '' }}>{{ s }}</option>
+      {% endfor %}
+    </select>
+  </form>
+</div>
+
+<!-- Podium (Top 3) — Silver | GOLD (center, elevated) | Bronze -->
+{% if board|length >= 3 %}
+<div class="trn-podium">
+  {# Silver - 2nd place #}
+  {% set silver = board[1] %}
+  {% set silver_initials = (silver.name.split()[0][:1] + (silver.name.split()[-1][:1] if silver.name.split()|length > 1 else ''))|upper %}
+  <div class="trn-podium-card silver">
+    <div class="trn-podium-medal">&#129352;</div>
+    <div class="trn-avatar" style="margin:0 auto 8px;">{{ silver_initials }}</div>
+    <div class="trn-podium-name">{{ silver.name|officer_link }}</div>
+    <div class="trn-podium-site">{{ silver.site or 'Unassigned' }}</div>
+    <div class="trn-podium-points silver">{{ silver.points }}</div>
+    <div class="trn-podium-pts-label">points</div>
+  </div>
+
+  {# Gold - 1st place (center, elevated) #}
+  {% set gold = board[0] %}
+  {% set gold_initials = (gold.name.split()[0][:1] + (gold.name.split()[-1][:1] if gold.name.split()|length > 1 else ''))|upper %}
+  <div class="trn-podium-card gold" style="transform:translateY(-16px);">
+    <div class="trn-podium-medal">&#129351;</div>
+    <div class="trn-avatar trn-avatar-lg" style="margin:0 auto 8px;">{{ gold_initials }}</div>
+    <div class="trn-podium-name">{{ gold.name|officer_link }}</div>
+    <div class="trn-podium-site">{{ gold.site or 'Unassigned' }}</div>
+    <div class="trn-podium-points gold">{{ gold.points }}</div>
+    <div class="trn-podium-pts-label">points</div>
+  </div>
+
+  {# Bronze - 3rd place #}
+  {% set bronze = board[2] %}
+  {% set bronze_initials = (bronze.name.split()[0][:1] + (bronze.name.split()[-1][:1] if bronze.name.split()|length > 1 else ''))|upper %}
+  <div class="trn-podium-card bronze">
+    <div class="trn-podium-medal">&#129353;</div>
+    <div class="trn-avatar" style="margin:0 auto 8px;">{{ bronze_initials }}</div>
+    <div class="trn-podium-name">{{ bronze.name|officer_link }}</div>
+    <div class="trn-podium-site">{{ bronze.site or 'Unassigned' }}</div>
+    <div class="trn-podium-points bronze">{{ bronze.points }}</div>
+    <div class="trn-podium-pts-label">points</div>
+  </div>
+</div>
+{% endif %}
+
+<!-- Full Leaderboard Table -->
+<div class="trn-card">
+  <div class="trn-section-header" style="margin-bottom:16px;">
+    <div class="trn-section-title">All Rankings</div>
+  </div>
+
+  <div style="overflow-x:auto;">
+    <table class="trn-table" id="leader-table">
+      <thead>
+        <tr>
+          <th>Rank</th>
+          <th>Officer</th>
+          <th>Site</th>
+          <th>Points</th>
+          <th>Courses</th>
+          <th>Tests Passed</th>
+          <th>Avg Score</th>
+        </tr>
+      </thead>
+      <tbody>
+        {% for officer in board %}
+        {% set initials = (officer.name.split()[0][:1] + (officer.name.split()[-1][:1] if officer.name.split()|length > 1 else ''))|upper %}
+        <tr>
+          <td>
+            {% if loop.index == 1 %}
+            <span class="trn-rank-badge gold">1</span>
+            {% elif loop.index == 2 %}
+            <span class="trn-rank-badge silver">2</span>
+            {% elif loop.index == 3 %}
+            <span class="trn-rank-badge bronze">3</span>
+            {% else %}
+            <span style="font-weight:600; color:var(--trn-text-muted);">{{ loop.index }}</span>
+            {% endif %}
+          </td>
+          <td>
+            <div style="display:flex; align-items:center; gap:10px;">
+              <div class="trn-avatar trn-avatar-sm">{{ initials }}</div>
+              <span style="font-weight:600;">{{ officer.name|officer_link }}</span>
+            </div>
+          </td>
+          <td>
+            {% if officer.site %}
+            <span class="trn-site-pill">{{ officer.site }}</span>
+            {% else %}
+            <span style="color:var(--trn-text-muted);">Unassigned</span>
+            {% endif %}
+          </td>
+          <td style="font-weight:700; color:var(--trn-green);">{{ officer.points }}</td>
+          <td>{{ officer.courses_completed }}</td>
+          <td>{{ officer.tests_passed }}</td>
+          <td>
+            {% if officer.avg_score and officer.avg_score > 0 %}
+            <span class="trn-badge" style="{% if officer.avg_score >= 90 %}background:rgba(34,197,94,0.15); color:var(--trn-green);{% elif officer.avg_score >= 70 %}background:rgba(59,130,246,0.15); color:var(--trn-blue);{% else %}background:rgba(249,115,22,0.15); color:var(--trn-orange);{% endif %}">{{ officer.avg_score|round(1) }}%</span>
+            {% else %}
+            <span style="color:var(--trn-text-muted);">--</span>
+            {% endif %}
+          </td>
+        </tr>
+        {% else %}
+        <tr><td colspan="7" style="text-align:center; color:var(--trn-text-muted); padding:32px;">No leaderboard data yet</td></tr>
+        {% endfor %}
+      </tbody>
+    </table>
+  </div>
+</div>
+
+<script>
+// Show site selector when "By Site" is clicked
+document.addEventListener('DOMContentLoaded', function() {
+  {% if site_filter %}
+  document.getElementById('site-select-modal').style.display = 'flex';
+  {% endif %}
+});
+</script>
+{% endblock %}

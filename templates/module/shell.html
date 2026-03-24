@@ -1,0 +1,34 @@
+{% extends "base.html" %}
+{% block title %}{{ module.name }} — Cerasus Hub{% endblock %}
+{% block content %}
+<div class="page-header">
+  <div>
+    <h1 class="page-title" style="display:flex; align-items:center; gap:10px;">
+      <span class="module-card-icon" style="background:{{ module_bg }}; color:{{ module_color }}; width:36px; height:36px; font-size:16px;">{{ module_icon|safe }}</span>
+      {{ module.name }}
+    </h1>
+    <p class="page-subtitle">{{ module.description }} &mdash; v{{ module.version }}</p>
+  </div>
+</div>
+
+<!-- Module pages as quick-nav cards -->
+{% set ns = namespace(idx=0) %}
+{% for section_title, section_items in module.sidebar_sections %}
+<div style="margin-bottom:24px;">
+  <div class="section-label">{{ section_title }}</div>
+  <div class="quick-nav-grid">
+    {% for page_name, page_icon in section_items %}
+    <a href="{{ url_for('modules.module_page', module_id=module.module_id, page_index=ns.idx) }}"
+       class="quick-nav-card">
+      <div class="quick-nav-card-icon" style="background:{{ module_bg }}; color:{{ module_color }};">
+        &#128196;
+      </div>
+      <div class="quick-nav-card-title">{{ page_name }}</div>
+      <div class="quick-nav-card-desc">Open {{ page_name|lower }} page</div>
+    </a>
+    {% set ns.idx = ns.idx + 1 %}
+    {% endfor %}
+  </div>
+</div>
+{% endfor %}
+{% endblock %}

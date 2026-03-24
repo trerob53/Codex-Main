@@ -1,0 +1,114 @@
+{% extends "base.html" %}
+{% block title %}Pending Orders — Uniforms — Cerasus Hub{% endblock %}
+
+{% block tabs %}
+<div class="module-tabs">
+  {% for section_title, section_items in sidebar_sections %}
+    {% for label, endpoint in section_items %}
+    <a href="{{ url_for(endpoint) }}" class="module-tab {{ 'active' if active_tab == label else '' }}">{{ label }}</a>
+    {% endfor %}
+  {% endfor %}
+</div>
+{% endblock %}
+
+{% block content %}
+<div class="page-header">
+  <div>
+    <h1 class="page-title">Pending Orders</h1>
+    <p class="page-subtitle">Orders awaiting fulfillment or delivery</p>
+  </div>
+</div>
+
+<div class="card" style="padding:20px;">
+  <div class="filter-bar" style="margin-bottom:16px;">
+    <div class="filter-search">
+      <span class="filter-search-icon">&#128269;</span>
+      <input type="text" placeholder="Search orders..." oninput="filterTable(this.value, 'orders-table')">
+    </div>
+    <select class="filter-select" id="status-filter" onchange="applyFilters()">
+      <option value="">All Statuses</option>
+      <option>Pending</option>
+      <option>Fulfilled</option>
+      <option>Cancelled</option>
+    </select>
+  </div>
+
+  <div style="overflow-x:auto;">
+    <table class="data-table" id="orders-table">
+      <thead>
+        <tr>
+          <th>Order ID</th>
+          <th>Officer</th>
+          <th>Item</th>
+          <th>Size</th>
+          <th>Qty</th>
+          <th>Type</th>
+          <th>Date Ordered</th>
+          <th>Status</th>
+          <th>Actions</th>
+        </tr>
+      </thead>
+      <tbody>
+        {% for order in orders %}
+        <tr data-status="{{ order.status }}">
+          <td class="font-mono" style="font-size:13px;">{{ order.order_id }}</td>
+          <td style="font-weight:600;">{{ order.officer_name }}</td>
+          <td>{{ order.item_name }}</td>
+          <td>{{ order.size or '—' }}</td>
+          <td>{{ order.quantity }}</td>
+          <td><span class="badge badge-info">{{ order.order_type or '—' }}</span></td>
+          <td style="font-size:13px;">{{ order.date_ordered or '—' }}</td>
+          <td>
+            {% if order.status == 'Pending' %}
+            <span class="badge badge-warning">Pending</span>
+            {% elif order.status == 'Fulfilled' %}
+            <span class="badge badge-success">Fulfilled</span>
+            {% else %}
+            <span class="badge badge-danger">{{ order.status }}</span>
+            {% endif %}
+          </td>
+          <td>
+            {% if order.status == 'Pending' %}
+            <div style="display:flex; gap:6px;">
+              <form method="post" style="display:inline;">
+                <input type="hidden" name="action" value="fulfill">
+                <input type="hidden" name="order_id" value="{{ order.order_id }}">
+                <button type="submit" class="btn btn-sm btn-blue" onclick="return confirm('Fulfill this order? An issuance will be created.')">Fulfill</button>
+              </form>
+              <form method="post" style="display:inline;">
+                <input type="hidden" name="action" value="cancel">
+                <input type="hidden" name="order_id" value="{{ order.order_id }}">
+                <button type="submit" class="btn btn-sm btn-danger" onclick="return confirm('Cancel this order?')">Cancel</button>
+              </form>
+            </div>
+            {% else %}
+            <span style="color:var(--text-light); font-size:12px;">—</span>
+            {% endif %}
+          </td>
+        </tr>
+        {% else %}
+        <tr><td colspan="9" style="text-align:center; color:var(--text-light); padding:32px;">No pending orders</td></tr>
+        {% endfor %}
+      </tbody>
+    </table>
+  </div>
+  <div style="margin-top:12px; font-size:13px; color:var(--text-light);">
+    {{ orders|length }} order{{ 's' if orders|length != 1 else '' }}
+  </div>
+</div>
+
+<script>
+function filterTable(query, tableId) { applyFilters(query); }
+function applyFilters(query) {
+  if (query === undefined) query = document.querySelector('.filter-search input').value;
+  var rows = document.getElementById('orders-table').querySelectorAll('tbody tr');
+  var statusFilter = document.getElementById('status-filter').value;
+  query = (query || '').toLowerCase();
+  rows.forEach(function(row) {
+    var textMatch = !query || row.textContent.toLowerCase().includes(query);
+    var statusMatch = !statusFilter || row.dataset.status === statusFilter;
+    row.style.display = textMatch && statusMatch ? '' : 'none';
+  });
+}
+</script>
+{% endblock %}

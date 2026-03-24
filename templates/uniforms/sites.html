@@ -1,0 +1,72 @@
+{% extends "base.html" %}
+{% block title %}Sites — Uniforms — Cerasus Hub{% endblock %}
+
+{% block tabs %}
+<div class="module-tabs">
+  {% for section_title, section_items in sidebar_sections %}
+    {% for label, endpoint in section_items %}
+    <a href="{{ url_for(endpoint) }}" class="module-tab {{ 'active' if active_tab == label else '' }}">{{ label }}</a>
+    {% endfor %}
+  {% endfor %}
+</div>
+{% endblock %}
+
+{% block content %}
+<div class="page-header">
+  <div>
+    <h1 class="page-title">Sites</h1>
+    <p class="page-subtitle">Managed site locations and uniform style assignments</p>
+  </div>
+</div>
+
+<div class="card" style="padding:20px;">
+  <div class="filter-bar" style="margin-bottom:16px;">
+    <div class="filter-search">
+      <span class="filter-search-icon">&#128269;</span>
+      <input type="text" placeholder="Search sites..." oninput="filterTable(this.value, 'sites-table')">
+    </div>
+  </div>
+
+  <div style="overflow-x:auto;">
+    <table class="data-table" id="sites-table">
+      <thead>
+        <tr><th>Name</th><th>Style</th><th>City</th><th>State</th><th>Market</th><th>Status</th></tr>
+      </thead>
+      <tbody>
+        {% for s in sites %}
+        <tr>
+          <td style="font-weight:600;">{{ s.name or '—' }}</td>
+          <td>
+            {% set style = s.style or s.get('uniform_style', '') %}
+            {% if style %}
+            <span class="badge badge-{{ 'info' if style == 'Soft Look' else 'warning' }}">{{ style }}</span>
+            {% else %}
+            —
+            {% endif %}
+          </td>
+          <td>{{ s.city or '—' }}</td>
+          <td>{{ s.state or '—' }}</td>
+          <td>{{ s.market or '—' }}</td>
+          <td><span class="badge badge-{{ 'success' if (s.status or 'Active') == 'Active' else 'warning' }}">{{ s.status or 'Active' }}</span></td>
+        </tr>
+        {% else %}
+        <tr><td colspan="6" style="text-align:center; color:var(--text-light); padding:32px;">No sites found</td></tr>
+        {% endfor %}
+      </tbody>
+    </table>
+  </div>
+  <div style="margin-top:12px; font-size:13px; color:var(--text-light);">
+    {{ sites|length }} site{{ 's' if sites|length != 1 else '' }}
+  </div>
+</div>
+
+<script>
+function filterTable(query, tableId) {
+  var rows = document.getElementById(tableId).querySelectorAll('tbody tr');
+  query = query.toLowerCase();
+  rows.forEach(function(row) {
+    row.style.display = row.textContent.toLowerCase().includes(query) ? '' : 'none';
+  });
+}
+</script>
+{% endblock %}

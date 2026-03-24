@@ -1,0 +1,123 @@
+{% extends "base.html" %}
+{% block title %}Settings — Cerasus Hub{% endblock %}
+
+{% block tabs %}
+<div class="module-tabs">
+  <a href="{{ url_for('admin.users') }}" class="module-tab">&#128101; Users</a>
+  <a href="{{ url_for('hub.people') }}" class="module-tab">&#127970; People & Sites</a>
+  <a href="{{ url_for('admin.audit_page') }}" class="module-tab">&#128203; Audit Log</a>
+  <a href="{{ url_for('admin.settings') }}" class="module-tab active">&#9881; Settings</a>
+</div>
+{% endblock %}
+
+{% block content %}
+<div class="page-header">
+  <div>
+    <h1 class="page-title">Admin Panel</h1>
+    <p class="page-subtitle">System administration and configuration</p>
+  </div>
+</div>
+
+<!-- SMTP Email Configuration -->
+<div class="card" style="padding:24px; margin-bottom:24px;">
+  <div style="display:flex; align-items:center; gap:10px; margin-bottom:4px;">
+    <span style="font-size:20px;">&#9993;</span>
+    <h2 class="section-title" style="margin:0;">Email Configuration (SMTP)</h2>
+  </div>
+  <p class="text-light" style="font-size:13px; margin-bottom:20px;">
+    Configure SMTP to send automated emails — alerts, reports, and notifications.
+  </p>
+
+  <form method="POST" action="{{ url_for('admin.save_smtp') }}">
+    <div style="display:flex; gap:8px; margin-bottom:20px;">
+      <button type="button" class="btn btn-secondary btn-sm"
+              onclick="document.getElementById('smtp_server').value='smtp.gmail.com';document.getElementById('smtp_port').value='587';document.getElementById('smtp_tls').checked=true;">
+        Gmail Preset
+      </button>
+      <button type="button" class="btn btn-secondary btn-sm"
+              onclick="document.getElementById('smtp_server').value='smtp.office365.com';document.getElementById('smtp_port').value='587';document.getElementById('smtp_tls').checked=true;">
+        Outlook 365 Preset
+      </button>
+    </div>
+
+    <div style="display:grid; grid-template-columns:1fr 1fr; gap:16px; margin-bottom:16px;">
+      <div>
+        <label class="form-label">SMTP Server</label>
+        <input type="text" id="smtp_server" name="server" class="form-input"
+               value="{{ smtp.server or '' }}" placeholder="smtp.gmail.com">
+      </div>
+      <div>
+        <label class="form-label">Port</label>
+        <input type="number" id="smtp_port" name="port" class="form-input"
+               value="{{ smtp.port or '587' }}" placeholder="587">
+      </div>
+    </div>
+
+    <div style="display:grid; grid-template-columns:1fr 1fr; gap:16px; margin-bottom:16px;">
+      <div>
+        <label class="form-label">Username / Email</label>
+        <input type="text" name="username" class="form-input"
+               value="{{ smtp.username or '' }}" placeholder="alerts@company.com">
+      </div>
+      <div>
+        <label class="form-label">Password / App Password</label>
+        <div class="input-icon-wrapper">
+          <input type="password" name="password" class="form-input"
+                 value="{{ smtp.password or '' }}" placeholder="app-specific password">
+          <button type="button" class="input-toggle" onclick="togglePassword(this)">&#128065;</button>
+        </div>
+      </div>
+    </div>
+
+    <div style="display:grid; grid-template-columns:1fr 1fr; gap:16px; margin-bottom:16px;">
+      <div>
+        <label class="form-label">From Email</label>
+        <input type="email" name="from_email" class="form-input"
+               value="{{ smtp.from_email or '' }}" placeholder="cerasus.hub@company.com">
+      </div>
+      <div>
+        <label class="form-label">From Name</label>
+        <input type="text" name="from_name" class="form-input"
+               value="{{ smtp.from_name or 'Cerasus Hub' }}" placeholder="Cerasus Hub">
+      </div>
+    </div>
+
+    <div style="margin-bottom:16px;">
+      <label class="form-label">Admin Notification Email</label>
+      <input type="email" name="admin_email" class="form-input"
+             value="{{ smtp.admin_email or '' }}" placeholder="admin@company.com">
+    </div>
+
+    <div style="display:flex; align-items:center; gap:24px; margin-bottom:24px;">
+      <label style="display:flex; align-items:center; gap:8px; cursor:pointer;">
+        <label class="toggle-switch">
+          <input type="checkbox" id="smtp_tls" name="use_tls" value="1" {{ 'checked' if smtp.get('use_tls', True) else '' }}>
+          <span class="toggle-slider"></span>
+        </label>
+        <span style="font-size:14px;">TLS Encryption</span>
+      </label>
+      <label style="display:flex; align-items:center; gap:8px; cursor:pointer;">
+        <label class="toggle-switch">
+          <input type="checkbox" id="smtp_enabled" name="enabled" value="1" {{ 'checked' if smtp.get('enabled', False) else '' }}>
+          <span class="toggle-slider"></span>
+        </label>
+        <span style="font-size:14px;">Enable Email Sending</span>
+      </label>
+    </div>
+
+    <div style="display:flex; gap:8px;">
+      <button type="submit" class="btn btn-blue">Save Settings</button>
+      <button type="button" class="btn btn-secondary"
+              hx-post="{{ url_for('admin.test_smtp') }}" hx-target="#smtp-test-result" hx-swap="innerHTML">
+        Test Connection
+      </button>
+      <button type="button" class="btn btn-secondary"
+              hx-post="{{ url_for('admin.send_test_email') }}" hx-target="#smtp-test-result" hx-swap="innerHTML">
+        Send Test Email
+      </button>
+    </div>
+
+    <div id="smtp-test-result" style="margin-top:12px;"></div>
+  </form>
+</div>
+{% endblock %}

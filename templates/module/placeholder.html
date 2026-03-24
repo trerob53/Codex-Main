@@ -1,0 +1,24 @@
+{% extends "base.html" %}
+{% block title %}{{ page_name }} — {{ module.name }} — Cerasus Hub{% endblock %}
+{% block content %}
+<div style="margin-bottom:16px;">
+  <a href="{{ url_for('modules.module_index', module_id=module.module_id) }}" class="btn btn-ghost btn-sm">
+    &#8592; Back to {{ module.name }}
+  </a>
+</div>
+
+<div class="card" style="padding:0; overflow:hidden;">
+  <div style="background:{{ module_bg }}; padding:24px 32px; display:flex; align-items:center; gap:12px;">
+    <div class="module-card-icon" style="background:rgba(255,255,255,0.2); color:#fff; width:40px; height:40px;">&#128196;</div>
+    <div>
+      <div style="font-size:18px; font-weight:700; color:#fff;">{{ page_name }}</div>
+      <div style="font-size:13px; color:rgba(255,255,255,0.7);">{{ module.name }} Module</div>
+    </div>
+  </div>
+  <div class="coming-soon">
+    <div class="coming-soon-icon">&#9881;</div>
+    <h2>Converting to Web Interface<span class="dots"></span></h2>
+    <p>This page is being converted from the desktop application. It will be available in a future update.</p>
+  </div>
+</div>
+{% endblock %}

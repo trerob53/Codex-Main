@@ -1,0 +1,118 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+  <meta charset="UTF-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1.0">
+  <title>{% block title %}Training Portal{% endblock %}</title>
+  <link rel="preconnect" href="https://fonts.googleapis.com">
+  <link href="https://fonts.googleapis.com/css2?family=Inter:wght@400;500;600;700;800&display=swap" rel="stylesheet">
+  <link rel="stylesheet" href="{{ url_for('static', filename='css/training.css') }}">
+  {% block head %}{% endblock %}
+</head>
+<body>
+<div class="trn-shell {{ '' if dark_mode else 'trn-light' }}">
+  <div class="trn-layout">
+    <!-- Sidebar -->
+    <aside class="trn-sidebar">
+      <div class="trn-sidebar-brand">
+        <div class="trn-sidebar-brand-icon">
+          <svg viewBox="0 0 24 24"><path d="M12 3L1 9l4 2.18v6L12 21l7-3.82v-6l2-1.09V17h2V9L12 3zm6.82 6L12 12.72 5.18 9 12 5.28 18.82 9zM17 15.99l-5 2.73-5-2.73v-3.72L12 15l5-2.73v3.72z"/></svg>
+        </div>
+        <div>
+          <div class="trn-sidebar-brand-text">Cerasus</div>
+          <div class="trn-sidebar-brand-sub">Training Portal</div>
+        </div>
+      </div>
+
+      <nav class="trn-sidebar-nav">
+        <a href="{{ url_for('hub.picker') }}" class="trn-sidebar-item" style="color:var(--trn-accent-light); margin-bottom:8px;">
+          <span class="trn-sidebar-icon">&#8592;</span> Back to Hub
+        </a>
+        <div style="border-top:1px solid var(--trn-card-border); margin:0 0 8px;"></div>
+        <a href="{{ url_for('training.dashboard') }}" class="trn-sidebar-item {{ 'active' if active_tab == 'dashboard' }}">
+          <span class="trn-sidebar-icon">&#9634;</span> Dashboard
+        </a>
+        <a href="{{ url_for('training.my_courses') }}" class="trn-sidebar-item {{ 'active' if active_tab == 'courses' }}">
+          <span class="trn-sidebar-icon">&#128218;</span> My Courses
+        </a>
+        <a href="{{ url_for('training.simulations') }}" class="trn-sidebar-item {{ 'active' if active_tab == 'simulations' }}">
+          <span class="trn-sidebar-icon">&#128187;</span> Simulations
+        </a>
+        <a href="{{ url_for('training.leaderboard') }}" class="trn-sidebar-item {{ 'active' if active_tab == 'leaderboard' }}">
+          <span class="trn-sidebar-icon">&#127942;</span> Leaderboard
+        </a>
+        <a href="{{ url_for('training.certificates') }}" class="trn-sidebar-item {{ 'active' if active_tab == 'certificates' }}">
+          <span class="trn-sidebar-icon">&#127891;</span> Certificates
+        </a>
+        <a href="{{ url_for('training.profile') }}" class="trn-sidebar-item {{ 'active' if active_tab == 'profile' }}">
+          <span class="trn-sidebar-icon">&#128100;</span> Profile
+        </a>
+        {% if session.get('role') == 'admin' %}
+        <div style="border-top:1px solid var(--trn-card-border); margin:12px 0;"></div>
+        <a href="{{ url_for('training.manage_courses') }}" class="trn-sidebar-item {{ 'active' if active_tab == 'manage' }}">
+          <span class="trn-sidebar-icon">&#9881;</span> Manage Courses
+        </a>
+        <a href="{{ url_for('training.reports') }}" class="trn-sidebar-item {{ 'active' if active_tab == 'reports' }}">
+          <span class="trn-sidebar-icon">&#128202;</span> Reports
+        </a>
+        {% endif %}
+      </nav>
+    </aside>
+
+    <!-- Main -->
+    <div class="trn-main">
+      <!-- Top Bar -->
+      <header class="trn-topbar">
+        <div style="position:relative;">
+          <button class="trn-user-btn" onclick="this.nextElementSibling.classList.toggle('open')">
+            {% set initials = ((session.get('display_name','') or session.get('username',''))[:2])|upper %}
+            <div class="trn-avatar">{{ initials }}</div>
+            <span>{{ session.get('display_name') or session.get('username', 'User') }}</span>
+            <span style="font-size:10px;">&#9660;</span>
+          </button>
+          <div class="trn-user-dropdown">
+            <div style="font-size:11px; color:var(--trn-text-muted); margin-bottom:8px;">
+              Signed in as<br>
+              <span style="color:var(--trn-text);">{{ session.get('username', '') }}</span>
+            </div>
+            <a href="{{ url_for('hub.picker') }}">&#127968; Back to Hub</a>
+            <form method="post" action="{{ url_for('auth.logout') }}" style="margin:0;">
+              <button type="submit" style="background:none;border:none;padding:0;color:inherit;cursor:pointer;font-size:inherit;font-family:inherit;">&#9194; Sign Out</button>
+            </form>
+          </div>
+        </div>
+      </header>
+
+      <!-- Content -->
+      <main class="trn-content">
+        {% with messages = get_flashed_messages(with_categories=true) %}
+        {% if messages %}
+        {% for category, message in messages %}
+        <div style="padding:10px 16px; margin-bottom:16px; border-radius:8px; font-size:13px;
+          {% if category == 'danger' or category == 'error' %}background:rgba(232,23,23,0.15); color:#FF4949; border:1px solid rgba(232,23,23,0.3);
+          {% elif category == 'success' %}background:rgba(34,197,94,0.15); color:#22C55E; border:1px solid rgba(34,197,94,0.3);
+          {% else %}background:rgba(59,130,246,0.15); color:#3B82F6; border:1px solid rgba(59,130,246,0.3);{% endif %}">
+          {{ message }}
+        </div>
+        {% endfor %}
+        {% endif %}
+        {% endwith %}
+
+        {% block content %}{% endblock %}
+      </main>
+    </div>
+  </div>
+</div>
+
+<script>
+// Close dropdown on outside click
+document.addEventListener('click', function(e) {
+  var dropdowns = document.querySelectorAll('.trn-user-dropdown');
+  dropdowns.forEach(function(d) {
+    if (!d.parentElement.contains(e.target)) d.classList.remove('open');
+  });
+});
+</script>
+{% block scripts %}{% endblock %}
+</body>
+</html>

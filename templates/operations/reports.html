@@ -1,0 +1,103 @@
+{% extends "operations/_layout.html" %}
+{% block page_title %}Reports{% endblock %}
+{% block breadcrumb_tail %}
+<span class="sep">&#8250;</span><span class="current">Reports</span>
+{% endblock %}
+
+{% block page_content %}
+<div class="page-header">
+  <div>
+    <h1 class="page-title">Reports</h1>
+    <p class="page-subtitle">Operations data summary and CSV exports</p>
+  </div>
+</div>
+
+<!-- Summary KPIs -->
+<div class="section-title">Operations Overview</div>
+<div class="stat-cards">
+  <div class="stat-card">
+    <div class="stat-card-label">Active Officers</div>
+    <div class="stat-card-value">{{ summary.active_officers }}</div>
+  </div>
+  <div class="stat-card">
+    <div class="stat-card-label">Active Sites</div>
+    <div class="stat-card-value">{{ summary.active_sites }}</div>
+  </div>
+  <div class="stat-card">
+    <div class="stat-card-label">Total Assignments</div>
+    <div class="stat-card-value">{{ summary.total_assignments }}</div>
+  </div>
+  <div class="stat-card">
+    <div class="stat-card-label">Scheduled</div>
+    <div class="stat-card-value">{{ summary.scheduled_assignments }}</div>
+  </div>
+</div>
+
+<!-- Records by Status -->
+<div class="section-title" style="margin-top:24px;">Records by Status</div>
+<div class="stat-cards">
+  {% for status, count in record_summary.items() %}
+  <div class="stat-card">
+    <div class="stat-card-label">{{ status }}</div>
+    <div class="stat-card-value">{{ count }}</div>
+  </div>
+  {% endfor %}
+  {% if not record_summary %}
+  <div class="stat-card">
+    <div class="stat-card-label">No Records</div>
+    <div class="stat-card-value">0</div>
+  </div>
+  {% endif %}
+</div>
+
+<!-- Coverage Requests -->
+<div class="section-title" style="margin-top:24px;">Coverage Requests</div>
+<div class="stat-cards">
+  <div class="stat-card">
+    <div class="stat-card-label">Open</div>
+    <div class="stat-card-value" style="color:#DC2626;">{{ req_summary.open }}</div>
+  </div>
+  <div class="stat-card">
+    <div class="stat-card-label">Urgent</div>
+    <div class="stat-card-value" style="color:#D97706;">{{ req_summary.urgent }}</div>
+  </div>
+  <div class="stat-card">
+    <div class="stat-card-label">Fill Rate</div>
+    <div class="stat-card-value">{{ req_summary.fill_rate }}%</div>
+  </div>
+</div>
+
+<!-- Open Positions -->
+<div class="section-title" style="margin-top:24px;">Open Positions</div>
+<div class="stat-cards">
+  <div class="stat-card">
+    <div class="stat-card-label">Open Positions</div>
+    <div class="stat-card-value">{{ pos_kpis.total_open }}</div>
+  </div>
+  <div class="stat-card">
+    <div class="stat-card-label">Open Hours</div>
+    <div class="stat-card-value">{{ pos_kpis.total_hours }}</div>
+  </div>
+  <div class="stat-card">
+    <div class="stat-card-label">OT Cost Exposure</div>
+    <div class="stat-card-value">${{ "%.2f"|format(pos_kpis.ot_cost_exposure) }}</div>
+  </div>
+  <div class="stat-card">
+    <div class="stat-card-label">Avg Days to Fill</div>
+    <div class="stat-card-value">{{ pos_kpis.avg_days_to_fill }}</div>
+  </div>
+</div>
+
+<!-- CSV Exports -->
+<div class="section-title" style="margin-top:32px;">Data Export</div>
+<div class="card">
+  <p style="margin-bottom:16px;color:var(--text-light);">Download operations data as CSV files.</p>
+  <div style="display:flex;gap:8px;flex-wrap:wrap;">
+    <a href="{{ url_for('operations.reports_export', collection='officers') }}" class="btn btn-blue btn-sm">Officers CSV</a>
+    <a href="{{ url_for('operations.reports_export', collection='sites') }}" class="btn btn-blue btn-sm">Sites CSV</a>
+    <a href="{{ url_for('operations.reports_export', collection='records') }}" class="btn btn-blue btn-sm">Records CSV</a>
+    <a href="{{ url_for('operations.reports_export', collection='assignments') }}" class="btn btn-blue btn-sm">Assignments CSV</a>
+    <a href="{{ url_for('operations.reports_export', collection='pto') }}" class="btn btn-blue btn-sm">PTO CSV</a>
+  </div>
+</div>
+{% endblock %}

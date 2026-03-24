@@ -1,0 +1,151 @@
+{% extends "base.html" %}
+{% block title %}Configuration — DA Generator — Cerasus Hub{% endblock %}
+
+{% block tabs %}
+<div class="module-tabs">
+  {% for section_title, section_items in sidebar_sections %}
+    {% for label, endpoint in section_items %}
+    <a href="{{ url_for(endpoint) }}" class="module-tab {{ 'active' if active_tab == label else '' }}">{{ label }}</a>
+    {% endfor %}
+  {% endfor %}
+</div>
+{% endblock %}
+
+{% block content %}
+<div class="page-header">
+  <div>
+    <h1 class="page-title">Configuration</h1>
+    <p class="page-subtitle">DA Generator module settings and statistics</p>
+  </div>
+</div>
+
+<!-- Module Stats -->
+<div class="stat-cards">
+  <div class="stat-card">
+    <div class="stat-card-label">Total DAs</div>
+    <div class="stat-card-value">{{ summary.total }}</div>
+  </div>
+  <div class="stat-card">
+    <div class="stat-card-label">Most Common Violation</div>
+    <div class="stat-card-value" style="font-size:16px;">{{ extended.most_common_violation or 'N/A' }}</div>
+  </div>
+  <div class="stat-card">
+    <div class="stat-card-label">Avg Draft-to-Delivery</div>
+    <div class="stat-card-value">{{ '{:.1f}'.format(extended.avg_draft_to_delivery_hours) }}h</div>
+  </div>
+</div>
+
+<!-- DA Volume by Month -->
+{% if extended.das_by_month %}
+<div class="card" style="padding:20px; margin-bottom:24px;">
+  <h2 class="section-title" style="margin-bottom:16px;">DA Volume (Last 6 Months)</h2>
+  <div style="overflow-x:auto;">
+    <table class="data-table">
+      <thead><tr><th>Month</th><th>DAs Created</th><th></th></tr></thead>
+      <tbody>
+        {% set max_count = extended.das_by_month|map(attribute=1)|max if extended.das_by_month else 1 %}
+        {% for month, count in extended.das_by_month %}
+        <tr>
+          <td style="font-weight:600;">{{ month }}</td>
+          <td>{{ count }}</td>
+          <td>
+            <div style="width:{{ (count / (max_count if max_count > 0 else 1) * 200)|int }}px; height:12px; background:#B91C1C; border-radius:4px; min-width:4px;"></div>
+          </td>
+        </tr>
+        {% endfor %}
+      </tbody>
+    </table>
+  </div>
+</div>
+{% endif %}
+
+<!-- Status Breakdown -->
+{% if summary.status_counts %}
+<div class="card" style="padding:20px; margin-bottom:24px;">
+  <h2 class="section-title" style="margin-bottom:16px;">Status Breakdown</h2>
+  <div style="display:flex; gap:16px; flex-wrap:wrap;">
+    {% set status_colors = {'draft': '#D97706', 'pending_review': '#3B82F6', 'delivered': '#0891B2', 'signed': '#059669', 'completed': '#059669'} %}
+    {% for status, count in summary.status_counts.items() %}
+    <div style="display:flex; align-items:center; gap:8px; padding:12px 20px; background:var(--bg); border-radius:8px; border:1px solid var(--border);">
+      <div style="width:12px; height:12px; border-radius:50%; background:{{ status_colors.get(status, '#6B7280') }};"></div>
+      <div>
+        <div style="font-weight:700; font-size:18px;">{{ count }}</div>
+        <div style="font-size:12px; color:var(--text-light);">{{ status|replace('_', ' ')|title }}</div>
+      </div>
+    </div>
+    {% endfor %}
+  </div>
+</div>
+{% endif %}
+
+<!-- Settings Form -->
+<div class="card" style="padding:24px;">
+  <h2 class="section-title" style="margin-bottom:16px;">Module Settings</h2>
+
+  <form method="post" action="{{ url_for('da_generator.configuration') }}">
+    <input type="hidden" name="action" value="save_setting">
+
+    <div style="display:grid; gap:20px; max-width:600px;">
+      <div>
+        <label class="form-label">Company Name</label>
+        <input type="hidden" name="key" value="company_name">
+        <input type="text" name="value" class="form-input"
+               value="{{ settings.company_name }}" placeholder="Cerasus Security">
+        <div style="font-size:12px; color:var(--text-light); margin-top:4px;">
+          Used in DA document headers and narrative templates.
+        </div>
+      </div>
+      <div style="display:flex; gap:12px;">
+        <button type="submit" class="btn btn-blue">Save Setting</button>
+      </div>
+    </div>
+  </form>
+
+  <hr style="margin:24px 0; border:none; border-top:1px solid var(--border);">
+
+  <form method="post" action="{{ url_for('da_generator.configuration') }}">
+    <input type="hidden" name="action" value="save_setting">
+    <div style="display:grid; gap:20px; max-width:600px;">
+      <div>
+        <label class="form-label">Default Security Director</label>
+        <input type="hidden" name="key" value="security_director_default">
+        <input type="text" name="value" class="form-input"
+               value="{{ settings.security_director_default }}" placeholder="Enter default name...">
+        <div style="font-size:12px; color:var(--text-light); margin-top:4px;">
+          Pre-fills the Security Director field on new DAs.
+        </div>
+      </div>
+      <div style="display:flex; gap:12px;">
+        <button type="submit" class="btn btn-blue">Save Setting</button>
+      </div>
+    </div>
+  </form>
+
+  <hr style="margin:24px 0; border:none; border-top:1px solid var(--border);">
+
+  <form method="post" action="{{ url_for('da_generator.configuration') }}">
+    <input type="hidden" name="action" value="save_setting">
+    <div style="display:grid; gap:20px; max-width:600px;">
+      <div>
+        <label class="form-label">Default Violation Type</label>
+        <input type="hidden" name="key" value="default_violation_type">
+        <select name="value" class="form-input">
+          <option value="">None</option>
+          <option {{ 'selected' if settings.default_violation_type == 'Attendance' else '' }}>Attendance</option>
+          <option {{ 'selected' if settings.default_violation_type == 'Tardiness' else '' }}>Tardiness</option>
+          <option {{ 'selected' if settings.default_violation_type == 'No Call / No Show' else '' }}>No Call / No Show</option>
+          <option {{ 'selected' if settings.default_violation_type == 'Policy Violation' else '' }}>Policy Violation</option>
+          <option {{ 'selected' if settings.default_violation_type == 'Conduct / Behavior' else '' }}>Conduct / Behavior</option>
+          <option {{ 'selected' if settings.default_violation_type == 'Job Performance' else '' }}>Job Performance</option>
+        </select>
+        <div style="font-size:12px; color:var(--text-light); margin-top:4px;">
+          Pre-selects the violation type on new DAs.
+        </div>
+      </div>
+      <div style="display:flex; gap:12px;">
+        <button type="submit" class="btn btn-blue">Save Setting</button>
+      </div>
+    </div>
+  </form>
+</div>
+{% endblock %}

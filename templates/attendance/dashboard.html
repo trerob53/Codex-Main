@@ -1,0 +1,141 @@
+{% extends "base.html" %}
+{% block title %}Dashboard — Attendance — Cerasus Hub{% endblock %}
+
+{% block tabs %}
+<div class="module-tabs">
+  <a href="{{ url_for('attendance.dashboard') }}" class="module-tab {{ 'active' if active_tab == 'dashboard' }}">Dashboard</a>
+  <a href="{{ url_for('attendance.roster') }}" class="module-tab {{ 'active' if active_tab == 'roster' }}">Roster</a>
+  <a href="{{ url_for('attendance.sites') }}" class="module-tab {{ 'active' if active_tab == 'sites' }}">Sites</a>
+  <a href="{{ url_for('attendance.log_infraction') }}" class="module-tab {{ 'active' if active_tab == 'log' }}">Log Infraction</a>
+  <a href="{{ url_for('attendance.discipline') }}" class="module-tab {{ 'active' if active_tab == 'discipline' }}">Discipline</a>
+  <a href="{{ url_for('attendance.reviews') }}" class="module-tab {{ 'active' if active_tab == 'reviews' }}">Reviews</a>
+  <a href="{{ url_for('attendance.reports') }}" class="module-tab {{ 'active' if active_tab == 'reports' }}">Reports</a>
+  <a href="{{ url_for('attendance.analytics') }}" class="module-tab {{ 'active' if active_tab == 'analytics' }}">Analytics</a>
+</div>
+{% endblock %}
+
+{% block content %}
+<div class="page-header">
+  <div>
+    <h1 class="page-title">Attendance Dashboard</h1>
+    <p class="page-subtitle">Overview of attendance tracking and discipline status</p>
+  </div>
+  <div>
+    <a href="{{ url_for('attendance.log_infraction') }}" class="btn btn-blue">+ Log Infraction</a>
+  </div>
+</div>
+
+<!-- KPI Cards -->
+<div class="stat-cards">
+  <div class="stat-card">
+    <div class="stat-card-icon" style="background:#DBEAFE; color:#2563EB;">&#128100;</div>
+    <div class="stat-card-label">Active Officers</div>
+    <div class="stat-card-value">{{ summary.active_officers }}</div>
+  </div>
+  <div class="stat-card">
+    <div class="stat-card-icon" style="background:#FEF3C7; color:#D97706;">&#9888;</div>
+    <div class="stat-card-label">At-Risk (5+ pts)</div>
+    <div class="stat-card-value">{{ summary.at_risk }}</div>
+  </div>
+  <div class="stat-card">
+    <div class="stat-card-icon" style="background:#E0E7FF; color:#4F46E5;">&#128196;</div>
+    <div class="stat-card-label">Pending Reviews</div>
+    <div class="stat-card-value">{{ summary.pending_reviews }}</div>
+  </div>
+  <div class="stat-card">
+    <div class="stat-card-icon" style="background:#FDE8EB; color:#C8102E;">&#128683;</div>
+    <div class="stat-card-label">Termination Eligible</div>
+    <div class="stat-card-value">{{ summary.termination_eligible }}</div>
+  </div>
+  <div class="stat-card">
+    <div class="stat-card-icon" style="background:#D1FAE5; color:#059669;">&#128197;</div>
+    <div class="stat-card-label">Infractions This Month</div>
+    <div class="stat-card-value">{{ summary.infractions_this_month }}</div>
+  </div>
+</div>
+
+<!-- Two-column layout: Recent Infractions + Top At-Risk -->
+<div style="display:grid; grid-template-columns:1fr 1fr; gap:24px; margin-top:24px;">
+
+  <!-- Recent Infractions -->
+  <div class="card">
+    <div class="section-title">Recent Infractions</div>
+    {% if summary.recent_infractions %}
+    <table class="data-table">
+      <thead>
+        <tr>
+          <th>Officer</th>
+          <th>Type</th>
+          <th>Points</th>
+          <th>Date</th>
+          <th>Site</th>
+        </tr>
+      </thead>
+      <tbody>
+        {% for inf in summary.recent_infractions[:5] %}
+        <tr>
+          <td style="font-weight:600;">{{ (inf.officer_name or inf.employee_id)|officer_link(inf.employee_id) }}</td>
+          <td>{{ inf.infraction_type|replace("_", " ")|title }}</td>
+          <td>{{ inf.points_assigned }}</td>
+          <td>{{ inf.infraction_date }}</td>
+          <td>{{ inf.resolved_site if inf.resolved_site is string else (inf.resolved_site.name if inf.resolved_site is mapping else (inf.site if inf.site is string else '—')) }}</td>
+        </tr>
+        {% endfor %}
+      </tbody>
+    </table>
+    {% else %}
+    <p style="color:var(--text-light); padding:16px;">No recent infractions.</p>
+    {% endif %}
+    <div style="padding:8px 16px;">
+      <a href="{{ url_for('attendance.discipline') }}" class="btn btn-secondary btn-sm">View All</a>
+    </div>
+  </div>
+
+  <!-- Top At-Risk Officers -->
+  <div class="card">
+    <div class="section-title">Top At-Risk Officers</div>
+    {% if summary.top_at_risk %}
+    <div style="padding:16px; display:flex; flex-direction:column; gap:12px;">
+      {% for off in summary.top_at_risk %}
+      <div style="display:flex; align-items:center; gap:12px;">
+        <div class="avatar" style="background:#C8102E; color:white; width:36px; height:36px; font-size:14px;">
+          {{ off.name[:2]|upper if off.name else '??' }}
+        </div>
+        <div style="flex:1; min-width:0;">
+          <div style="font-weight:600; font-size:14px;">{{ off.name|officer_link }}</div>
+          <div style="font-size:12px; color:var(--text-light);">{{ off.site }} &middot; {{ off.discipline_level or 'None' }}</div>
+        </div>
+        <div style="width:120px;">
+          <div style="background:#F3F4F6; border-radius:4px; height:8px; overflow:hidden;">
+            <div style="background:{% if off.active_points >= 10 %}#DC2626{% elif off.active_points >= 6 %}#D97706{% elif off.active_points >= 3 %}#F59E0B{% else %}#10B981{% endif %}; height:100%; width:{{ [off.active_points * 10, 100]|min }}%; border-radius:4px;"></div>
+          </div>
+          <div style="font-size:12px; text-align:right; margin-top:2px; font-weight:600;">{{ off.active_points }} pts</div>
+        </div>
+      </div>
+      {% endfor %}
+    </div>
+    {% else %}
+    <p style="color:var(--text-light); padding:16px;">No at-risk officers.</p>
+    {% endif %}
+  </div>
+
+</div>
+
+<!-- Discipline Distribution -->
+<div class="card" style="margin-top:24px;">
+  <div class="section-title">Active Infraction Breakdown</div>
+  {% if summary.infraction_breakdown %}
+  <div style="padding:16px; display:grid; grid-template-columns:repeat(auto-fill, minmax(200px, 1fr)); gap:12px;">
+    {% for itype, count in summary.infraction_breakdown.items() %}
+    <div style="display:flex; align-items:center; justify-content:space-between; padding:10px 14px; background:#F9FAFB; border-radius:8px; border:1px solid #E5E7EB;">
+      <span style="font-size:13px;">{{ itype|replace("_", " ")|title }}</span>
+      <span class="badge badge-info">{{ count }}</span>
+    </div>
+    {% endfor %}
+  </div>
+  {% else %}
+  <p style="color:var(--text-light); padding:16px;">No active infractions.</p>
+  {% endif %}
+</div>
+
+{% endblock %}

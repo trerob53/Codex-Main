@@ -1,0 +1,347 @@
+{% extends "base.html" %}
+{% block title %}People & Sites — Cerasus Hub{% endblock %}
+{% block content %}
+<div class="page-header">
+  <div>
+    <h1 class="page-title">People &amp; Sites</h1>
+    <p class="page-subtitle">Manage officers and site locations</p>
+  </div>
+</div>
+
+<!-- Officers -->
+<div class="card" style="padding:20px; margin-bottom:24px;">
+  <div style="display:flex; justify-content:space-between; align-items:center; margin-bottom:16px;">
+    <h2 class="section-title" style="margin:0;">Officers (<span id="officer-count">{{ officers|length }}</span>)</h2>
+    <div style="display:flex; gap:8px;">
+      <button class="btn btn-blue" onclick="document.getElementById('add-officer-modal').style.display='flex'">+ Add Officer</button>
+      <button class="btn btn-secondary" onclick="toggleReassignMode()">&#128260; Mass Reassign</button>
+    </div>
+  </div>
+
+  <!-- Mass Reassign Bar (hidden by default) -->
+  <div id="reassign-bar" style="display:none; background:var(--blue-light); border:1px solid var(--blue); border-radius:8px; padding:12px 16px; margin-bottom:16px; opacity:0.9;">
+    <form method="POST" action="{{ url_for('hub.mass_reassign') }}" id="reassign-form"
+          onsubmit="return validateReassign()">
+      <div style="display:flex; align-items:center; gap:12px; flex-wrap:wrap;">
+        <span style="font-weight:600; color:#1D4ED8;">&#128260; Mass Reassign</span>
+        <span id="selected-count" style="font-size:13px; color:#3B82F6;">0 selected</span>
+        <select name="new_site" class="form-input" style="width:220px; min-height:36px;">
+          <option value="">Unassigned</option>
+          {% for s in sites %}
+          <option value="{{ s.name }}">{{ s.name }}</option>
+          {% endfor %}
+        </select>
+        <button type="submit" class="btn btn-blue btn-sm">Reassign Selected</button>
+        <button type="button" class="btn btn-secondary btn-sm" onclick="toggleReassignMode()">Cancel</button>
+      </div>
+      <div id="hidden-officer-ids"></div>
+    </form>
+  </div>
+
+  <div class="filter-bar" style="margin-bottom:16px;">
+    <div class="filter-search">
+      <span class="filter-search-icon">&#128269;</span>
+      <input type="text" placeholder="Search officers..." id="officer-search"
+             oninput="filterOfficers()">
+    </div>
+    <select class="filter-select" id="site-filter" onchange="filterOfficers()">
+      <option value="">All Sites</option>
+      {% for s in sites %}
+      <option value="{{ s.name }}">{{ s.name }}</option>
+      {% endfor %}
+    </select>
+    <select class="filter-select" id="status-filter" onchange="filterOfficers()">
+      <option value="">All Statuses</option>
+      <option value="Active">Active</option>
+      <option value="Inactive">Inactive</option>
+      <option value="Terminated">Terminated</option>
+    </select>
+  </div>
+
+  <div style="overflow-x:auto;">
+    <table class="data-table" id="officers-table">
+      <thead>
+        <tr>
+          <th id="checkbox-col" style="display:none; width:40px;">
+            <input type="checkbox" id="select-all" onchange="toggleSelectAll(this)">
+          </th>
+          <th>Name</th>
+          <th>Employee ID</th>
+          <th>Site</th>
+          <th>Job Title</th>
+          <th>Status</th>
+          <th>Hire Date</th>
+          <th>Actions</th>
+        </tr>
+      </thead>
+      <tbody>
+        {% for o in officers %}
+        {% set initials = (o.name.split()[0][:1] + (o.name.split()[-1][:1] if o.name.split()|length > 1 else ''))|upper %}
+        {% set colors = ['#3B82F6','#8B5CF6','#059669','#D97706','#C8102E','#6366F1','#0891B2'] %}
+        {% set avatar_color = colors[loop.index0 % colors|length] %}
+        <tr data-site="{{ o.site or '' }}" data-status="{{ o.status or 'Active' }}" data-officer-id="{{ o.officer_id }}">
+          <td class="chk-cell" style="display:none;">
+            <input type="checkbox" class="officer-check" value="{{ o.officer_id }}" onchange="updateSelectedCount()">
+          </td>
+          <td>
+            <div style="display:flex; align-items:center; gap:10px;">
+              <div class="avatar" style="background:{{ avatar_color }};">{{ initials }}</div>
+              <div>
+                <a href="{{ url_for('hub.officer_360', officer_id=o.officer_id) }}" style="font-weight:600; color:var(--blue); text-decoration:none;">{{ o.name }}</a>
+                <div style="font-size:11px; color:var(--text-light);">{{ o.email or '' }}</div>
+              </div>
+            </div>
+          </td>
+          <td class="font-mono" style="font-size:13px;">{{ o.employee_id or '—' }}</td>
+          <td>{{ o.site or '—' }}</td>
+          <td>{{ o.job_title or '—' }}</td>
+          <td>
+            {% set status = o.status or 'Active' %}
+            <span class="badge badge-{{ 'success' if status == 'Active' else 'danger' }}">{{ status }}</span>
+          </td>
+          <td style="font-size:13px;">{{ o.hire_date or '—' }}</td>
+          <td style="white-space:nowrap;">
+            <a href="{{ url_for('hub.officer_360', officer_id=o.officer_id) }}" class="btn btn-blue btn-sm">360</a>
+            <form method="POST" action="{{ url_for('hub.delete_officer_route') }}" style="display:inline;"
+                  onsubmit="return confirm('Delete officer {{ o.name }}? This will mark them as Deleted.');">
+              <input type="hidden" name="officer_id" value="{{ o.officer_id }}">
+              <button type="submit" class="btn btn-danger btn-sm">Del</button>
+            </form>
+          </td>
+        </tr>
+        {% else %}
+        <tr><td colspan="8" style="text-align:center; color:var(--text-light); padding:32px;">No officers found</td></tr>
+        {% endfor %}
+      </tbody>
+    </table>
+  </div>
+</div>
+
+<!-- Sites -->
+<div class="card" style="padding:20px;">
+  <div style="display:flex; justify-content:space-between; align-items:center; margin-bottom:16px;">
+    <h2 class="section-title" style="margin:0;">Sites ({{ sites|length }})</h2>
+    <button class="btn btn-blue" onclick="document.getElementById('add-site-modal').style.display='flex'">+ Add Site</button>
+  </div>
+  <div style="overflow-x:auto;">
+    <table class="data-table" id="sites-table">
+      <thead>
+        <tr><th>Name</th><th>City</th><th>State</th><th>Market</th><th>Status</th><th>Actions</th></tr>
+      </thead>
+      <tbody>
+        {% for s in sites %}
+        <tr>
+          <td style="font-weight:600;">{{ s.name }}</td>
+          <td>{{ s.city or '—' }}</td>
+          <td>{{ s.state or '—' }}</td>
+          <td>{{ s.market or '—' }}</td>
+          <td><span class="badge badge-{{ 'success' if (s.status or 'Active') == 'Active' else 'warning' }}">{{ s.status or 'Active' }}</span></td>
+          <td>
+            <button class="btn btn-danger btn-sm" onclick="openDeleteSiteModal('{{ s.site_id }}', '{{ s.name }}')">Delete</button>
+          </td>
+        </tr>
+        {% else %}
+        <tr><td colspan="6" style="text-align:center; color:var(--text-light); padding:32px;">No sites found</td></tr>
+        {% endfor %}
+      </tbody>
+    </table>
+  </div>
+</div>
+
+<!-- Delete Site Modal -->
+<div id="delete-site-modal" class="modal-overlay" style="display:none;" onclick="if(event.target===this)this.style.display='none'">
+  <div class="modal-card" style="max-width:480px;">
+    <h2 style="font-size:18px; font-weight:700; margin-bottom:8px;">Delete Site</h2>
+    <p style="color:var(--text-light); margin-bottom:16px;">
+      Are you sure you want to delete <strong id="delete-site-name"></strong>?
+      Choose what to do with officers assigned to this site.
+    </p>
+    <form method="POST" action="{{ url_for('hub.delete_site') }}">
+      <input type="hidden" name="site_id" id="delete-site-id">
+      <div style="margin-bottom:16px;">
+        <label class="form-label">Reassign officers to:</label>
+        <select name="reassign_to" class="form-input">
+          <option value="">Unassigned (clear site)</option>
+          {% for s in sites %}
+          <option value="{{ s.name }}">{{ s.name }}</option>
+          {% endfor %}
+          <option value="__skip__">Don't reassign (leave as-is)</option>
+        </select>
+      </div>
+      <div style="display:flex; gap:8px; justify-content:flex-end;">
+        <button type="button" class="btn btn-secondary" onclick="this.closest('.modal-overlay').style.display='none'">Cancel</button>
+        <button type="submit" class="btn btn-danger">Delete Site</button>
+      </div>
+    </form>
+  </div>
+</div>
+
+<!-- Add Officer Modal -->
+<div id="add-officer-modal" class="modal-overlay" style="display:none;" onclick="if(event.target===this)this.style.display='none'">
+  <div class="modal-card" style="max-width:560px;">
+    <h2 style="font-size:18px; font-weight:700; margin-bottom:16px;">Add New Officer</h2>
+    <form method="POST" action="{{ url_for('hub.add_officer') }}">
+      <div style="display:grid; grid-template-columns:1fr 1fr; gap:12px;">
+        <div>
+          <label class="form-label">First Name *</label>
+          <input type="text" name="first_name" class="form-input" required>
+        </div>
+        <div>
+          <label class="form-label">Last Name *</label>
+          <input type="text" name="last_name" class="form-input" required>
+        </div>
+        <div>
+          <label class="form-label">Employee ID</label>
+          <input type="text" name="employee_id" class="form-input" placeholder="e.g. 1001">
+        </div>
+        <div>
+          <label class="form-label">Site</label>
+          <select name="site" class="form-input">
+            <option value="">Unassigned</option>
+            {% for s in sites %}
+            <option value="{{ s.name }}">{{ s.name }}</option>
+            {% endfor %}
+          </select>
+        </div>
+        <div>
+          <label class="form-label">Job Title</label>
+          <input type="text" name="job_title" class="form-input" value="Security Officer">
+        </div>
+        <div>
+          <label class="form-label">Hire Date</label>
+          <input type="date" name="hire_date" class="form-input">
+        </div>
+        <div>
+          <label class="form-label">Email</label>
+          <input type="email" name="email" class="form-input">
+        </div>
+        <div>
+          <label class="form-label">Phone</label>
+          <input type="tel" name="phone" class="form-input">
+        </div>
+      </div>
+      <div style="display:flex; gap:8px; justify-content:flex-end; margin-top:16px;">
+        <button type="button" class="btn btn-secondary" onclick="this.closest('.modal-overlay').style.display='none'">Cancel</button>
+        <button type="submit" class="btn btn-blue">Add Officer</button>
+      </div>
+    </form>
+  </div>
+</div>
+
+<!-- Add Site Modal -->
+<div id="add-site-modal" class="modal-overlay" style="display:none;" onclick="if(event.target===this)this.style.display='none'">
+  <div class="modal-card" style="max-width:480px;">
+    <h2 style="font-size:18px; font-weight:700; margin-bottom:16px;">Add New Site</h2>
+    <form method="POST" action="{{ url_for('hub.add_site') }}">
+      <div style="display:grid; grid-template-columns:1fr 1fr; gap:12px;">
+        <div style="grid-column:span 2;">
+          <label class="form-label">Site Name *</label>
+          <input type="text" name="name" class="form-input" required placeholder="e.g. Salesforce Tower">
+        </div>
+        <div>
+          <label class="form-label">City</label>
+          <input type="text" name="city" class="form-input">
+        </div>
+        <div>
+          <label class="form-label">State</label>
+          <input type="text" name="state" class="form-input" placeholder="e.g. IN">
+        </div>
+        <div>
+          <label class="form-label">Market</label>
+          <input type="text" name="market" class="form-input">
+        </div>
+        <div>
+          <label class="form-label">Address</label>
+          <input type="text" name="address" class="form-input">
+        </div>
+      </div>
+      <div style="display:flex; gap:8px; justify-content:flex-end; margin-top:16px;">
+        <button type="button" class="btn btn-secondary" onclick="this.closest('.modal-overlay').style.display='none'">Cancel</button>
+        <button type="submit" class="btn btn-blue">Add Site</button>
+      </div>
+    </form>
+  </div>
+</div>
+
+<script>
+var reassignMode = false;
+
+function toggleReassignMode() {
+  reassignMode = !reassignMode;
+  var bar = document.getElementById('reassign-bar');
+  var checkCols = document.querySelectorAll('#checkbox-col, .chk-cell');
+  bar.style.display = reassignMode ? 'block' : 'none';
+  checkCols.forEach(function(el) { el.style.display = reassignMode ? '' : 'none'; });
+  if (!reassignMode) {
+    // Uncheck all
+    document.querySelectorAll('.officer-check').forEach(function(cb) { cb.checked = false; });
+    document.getElementById('select-all').checked = false;
+    updateSelectedCount();
+  }
+}
+
+function toggleSelectAll(masterCb) {
+  var rows = document.querySelectorAll('#officers-table tbody tr');
+  rows.forEach(function(row) {
+    if (row.style.display !== 'none') {
+      var cb = row.querySelector('.officer-check');
+      if (cb) cb.checked = masterCb.checked;
+    }
+  });
+  updateSelectedCount();
+}
+
+function updateSelectedCount() {
+  var checked = document.querySelectorAll('.officer-check:checked');
+  document.getElementById('selected-count').textContent = checked.length + ' selected';
+}
+
+function validateReassign() {
+  var checked = document.querySelectorAll('.officer-check:checked');
+  if (checked.length === 0) {
+    alert('Select at least one officer to reassign.');
+    return false;
+  }
+  // Add hidden inputs for selected officer IDs
+  var container = document.getElementById('hidden-officer-ids');
+  container.innerHTML = '';
+  checked.forEach(function(cb) {
+    var input = document.createElement('input');
+    input.type = 'hidden'; input.name = 'officer_ids'; input.value = cb.value;
+    container.appendChild(input);
+  });
+  var site = document.querySelector('#reassign-form select[name="new_site"]');
+  var siteName = site.options[site.selectedIndex].text;
+  return confirm('Reassign ' + checked.length + ' officer(s) to ' + siteName + '?');
+}
+
+function openDeleteSiteModal(siteId, siteName) {
+  document.getElementById('delete-site-id').value = siteId;
+  document.getElementById('delete-site-name').textContent = siteName;
+  // Remove the site being deleted from the reassign dropdown
+  var sel = document.querySelector('#delete-site-modal select[name="reassign_to"]');
+  for (var i = 0; i < sel.options.length; i++) {
+    sel.options[i].style.display = (sel.options[i].value === siteName) ? 'none' : '';
+  }
+  document.getElementById('delete-site-modal').style.display = 'flex';
+}
+
+function filterOfficers() {
+  var query = document.getElementById('officer-search').value.toLowerCase();
+  var siteFilter = document.getElementById('site-filter').value;
+  var statusFilter = document.getElementById('status-filter').value;
+  var rows = document.getElementById('officers-table').querySelectorAll('tbody tr');
+  var count = 0;
+  rows.forEach(function(row) {
+    if (!row.dataset.site && !row.dataset.status) return;
+    var matchText = !query || row.textContent.toLowerCase().includes(query);
+    var matchSite = !siteFilter || row.dataset.site === siteFilter;
+    var matchStatus = !statusFilter || row.dataset.status === statusFilter;
+    var show = matchText && matchSite && matchStatus;
+    row.style.display = show ? '' : 'none';
+    if (show) count++;
+  });
+  document.getElementById('officer-count').textContent = count;
+}
+</script>
+{% endblock %}
