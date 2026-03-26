@@ -470,6 +470,19 @@ def site_management():
     return render_template("attendance/site_mgmt.html", **_ctx("site_mgmt"), sites_list=all_sites)
 
 
+@att_bp.route("/remove-duplicates", methods=["POST"])
+@login_required
+@module_access_required(MODULE_ID)
+def remove_duplicates():
+    removed = dm.remove_duplicate_infractions()
+    audit.log_event(
+        MODULE_ID, "remove_duplicates", _username(),
+        details=f"Removed {removed} duplicate infractions",
+    )
+    flash(f"Removed {removed} duplicate infractions.", "success")
+    return redirect(request.referrer or url_for("attendance.dashboard"))
+
+
 @att_bp.route("/policy", methods=["GET", "POST"])
 @login_required
 @module_access_required(MODULE_ID)

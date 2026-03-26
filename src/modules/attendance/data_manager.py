@@ -208,6 +208,33 @@ def delete_infraction(infraction_id: int) -> bool:
     return affected > 0
 
 
+def remove_duplicate_infractions() -> int:
+    """Remove duplicate infractions, keeping the one with the lowest id for each
+    (employee_id, infraction_type, infraction_date) combination. Returns count removed."""
+    conn = get_conn()
+    cur = conn.execute(
+        """DELETE FROM ats_infractions
+           WHERE id NOT IN (
+               SELECT MIN(id)
+               FROM ats_infractions
+               GROUP BY employee_id, infraction_type, infraction_date
+           )"""
+    )
+    removed = cur.rowcount
+    conn.commit()
+
+    # Refresh discipline for all affected officers
+    if removed > 0:
+        rows = conn.execute("SELECT DISTINCT employee_id FROM ats_infractions").fetchall()
+        conn.close()
+        for r in rows:
+            _refresh_officer_discipline(r["employee_id"])
+    else:
+        conn.close()
+
+    return removed
+
+
 # ── Employment Reviews CRUD ───────────────────────────────────────────
 
 def get_all_reviews() -> list:
@@ -692,6 +719,17 @@ def import_employees_csv(csv_text: str, created_by: str = "") -> dict:
     return {"imported": imported, "skipped": skipped, "errors": errors}
 
 
+def _load_existing_infraction_keys() -> set:
+    """Load a set of (employee_id, infraction_type, infraction_date) tuples for all existing infractions.
+    Used to detect and skip duplicates during CSV import."""
+    conn = get_conn()
+    rows = conn.execute(
+        "SELECT employee_id, infraction_type, infraction_date FROM ats_infractions"
+    ).fetchall()
+    conn.close()
+    return {(r["employee_id"], r["infraction_type"], r["infraction_date"]) for r in rows}
+
+
 def _resolve_employee_by_name(name: str) -> str | None:
     """Look up an officer_id by name. Returns officer_id or None."""
     if not name:
@@ -750,14 +788,22 @@ def import_infractions_csv(csv_text: str, entered_by: str = "") -> dict:
     if not is_tracktik:
         # Simple format — original logic
         imported, skipped, errors = 0, 0, []
+        # Load existing infractions to detect duplicates
+        existing = _load_existing_infraction_keys()
         for i, row in enumerate(reader, start=2):
             try:
                 emp = row.get("employee_id", "").strip()
                 itype = row.get("infraction_type", "").strip()
+                idate = row.get("infraction_date", "").strip()
                 if not emp or not itype:
                     skipped += 1
                     continue
+                dup_key = (emp, itype, idate)
+                if dup_key in existing:
+                    skipped += 1
+                    continue
                 create_infraction(dict(row), entered_by=entered_by)
+                existing.add(dup_key)
                 imported += 1
             except Exception as exc:
                 errors.append(f"Row {i}: {exc}")
@@ -767,6 +813,7 @@ def import_infractions_csv(csv_text: str, entered_by: str = "") -> dict:
     imported, skipped = 0, 0
     errors: list[str] = []
     not_found: set[str] = set()
+    existing = _load_existing_infraction_keys()
 
     # First pass: collect all rows and sort by date per employee
     rows_parsed = []
@@ -851,6 +898,11 @@ def import_infractions_csv(csv_text: str, entered_by: str = "") -> dict:
 
         emp_counts[eid][base] = count + 1
 
+        dup_key = (eid, itype, r["infraction_date"])
+        if dup_key in existing:
+            skipped += 1
+            continue
+
         try:
             create_infraction({
                 "employee_id": eid,
@@ -859,6 +911,7 @@ def import_infractions_csv(csv_text: str, entered_by: str = "") -> dict:
                 "site": r["site"],
                 "description": r["description"],
             }, entered_by=entered_by)
+            existing.add(dup_key)
             imported += 1
         except Exception as exc:
             errors.append(f"Row {r['row_num']} ({r['employee_name']}): {exc}")

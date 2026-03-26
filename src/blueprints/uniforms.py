@@ -321,6 +321,36 @@ def settings():
             req_id = request.form.get("req_id", "")
             dm.delete_requirement(req_id)
             flash("Requirement deleted.", "warning")
+        elif action == "add_catalog_item":
+            data = {
+                "item_name": request.form.get("item_name", ""),
+                "category": request.form.get("category", ""),
+                "description": request.form.get("description", ""),
+                "unit_cost": request.form.get("unit_cost", "0"),
+                "reorder_point": request.form.get("reorder_point", "5"),
+                "status": request.form.get("status", "Active"),
+            }
+            username = session.get("username", "system")
+            dm.create_catalog_item(data, created_by=username)
+            flash("Catalog item added.", "success")
+        elif action == "edit_catalog_item":
+            item_id = request.form.get("item_id", "")
+            data = {
+                "item_name": request.form.get("item_name", ""),
+                "category": request.form.get("category", ""),
+                "description": request.form.get("description", ""),
+                "unit_cost": request.form.get("unit_cost", "0"),
+                "reorder_point": request.form.get("reorder_point", "5"),
+                "status": request.form.get("status", "Active"),
+            }
+            if dm.update_catalog_item(item_id, data):
+                flash("Catalog item updated.", "success")
+            else:
+                flash("Catalog item not found.", "danger")
+        elif action == "delete_catalog_item":
+            item_id = request.form.get("item_id", "")
+            dm.delete_catalog_item(item_id)
+            flash("Catalog item deleted.", "warning")
         return redirect(url_for("uniforms.settings"))
 
     catalog = dm.get_all_catalog()

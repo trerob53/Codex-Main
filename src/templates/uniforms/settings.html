@@ -86,17 +86,136 @@
   </div>
 </div>
 
-<!-- Catalog Summary -->
+<!-- Catalog Management -->
 <div class="card" style="padding:24px;">
-  <h2 class="section-title" style="margin-bottom:16px;">Catalog Summary</h2>
+  <h2 class="section-title" style="margin-bottom:16px;">Uniform Types / Catalog Items</h2>
   <p style="font-size:13px; color:var(--text-light); margin-bottom:16px;">
-    {{ catalog|length }} items in catalog across {{ catalog|map(attribute='category')|unique|list|length }} categories.
+    {{ catalog|length }} items in catalog. Add, edit, or remove uniform types below.
   </p>
-  <div style="display:flex; gap:8px; flex-wrap:wrap;">
-    {% set cats = catalog|groupby('category') %}
-    {% for cat_name, items in cats %}
-    <span class="badge badge-info">{{ cat_name }}: {{ items|length }}</span>
-    {% endfor %}
+
+  <!-- Add New Catalog Item -->
+  <details style="margin-bottom:20px;">
+    <summary style="cursor:pointer; font-weight:600; color:var(--primary); font-size:14px;">+ Add New Uniform Type</summary>
+    <form method="post" action="{{ url_for('uniforms.settings') }}" style="margin-top:12px; padding:16px; background:var(--bg-light, #f9fafb); border-radius:8px;">
+      <input type="hidden" name="action" value="add_catalog_item">
+      <div style="display:grid; grid-template-columns:repeat(auto-fill, minmax(200px, 1fr)); gap:12px;">
+        <div>
+          <label class="form-label">Item Name</label>
+          <input type="text" name="item_name" class="form-input" required placeholder="e.g. Polo Shirt">
+        </div>
+        <div>
+          <label class="form-label">Category</label>
+          <select name="category" class="form-input" required>
+            <option value="">Select...</option>
+            {% for cat in categories %}
+            <option>{{ cat }}</option>
+            {% endfor %}
+          </select>
+        </div>
+        <div>
+          <label class="form-label">Unit Cost ($)</label>
+          <input type="number" name="unit_cost" class="form-input" step="0.01" min="0" value="0.00">
+        </div>
+        <div>
+          <label class="form-label">Reorder Point</label>
+          <input type="number" name="reorder_point" class="form-input" min="0" value="5">
+        </div>
+        <div>
+          <label class="form-label">Status</label>
+          <select name="status" class="form-input">
+            <option>Active</option>
+            <option>Inactive</option>
+          </select>
+        </div>
+        <div>
+          <label class="form-label">Description</label>
+          <input type="text" name="description" class="form-input" placeholder="Optional description">
+        </div>
+      </div>
+      <button type="submit" class="btn btn-blue btn-sm" style="margin-top:12px;">Add Item</button>
+    </form>
+  </details>
+
+  <!-- Catalog Table -->
+  <div style="overflow-x:auto;">
+    <table class="data-table">
+      <thead>
+        <tr><th>Name</th><th>Category</th><th>Unit Cost</th><th>Reorder Pt</th><th>Status</th><th>Actions</th></tr>
+      </thead>
+      <tbody>
+        {% for item in catalog %}
+        <tr id="row-{{ item.item_id }}">
+          <td style="font-weight:600;">{{ item.item_name }}</td>
+          <td>{{ item.category }}</td>
+          <td>${{ item.unit_cost }}</td>
+          <td>{{ item.reorder_point }}</td>
+          <td>
+            <span class="badge {{ 'badge-success' if item.status == 'Active' else 'badge-muted' }}">{{ item.status }}</span>
+          </td>
+          <td style="white-space:nowrap;">
+            <button type="button" class="btn btn-sm btn-outline" onclick="openEditModal('{{ item.item_id }}', '{{ item.item_name|e }}', '{{ item.category|e }}', '{{ item.description|e }}', '{{ item.unit_cost }}', '{{ item.reorder_point }}', '{{ item.status }}')">Edit</button>
+            <form method="post" style="display:inline;">
+              <input type="hidden" name="action" value="delete_catalog_item">
+              <input type="hidden" name="item_id" value="{{ item.item_id }}">
+              <button type="submit" class="btn btn-sm btn-danger" onclick="return confirm('Delete this uniform type? This cannot be undone.')">Delete</button>
+            </form>
+          </td>
+        </tr>
+        {% else %}
+        <tr><td colspan="6" style="text-align:center; color:var(--text-light); padding:24px;">No catalog items. Add a uniform type above.</td></tr>
+        {% endfor %}
+      </tbody>
+    </table>
+  </div>
+</div>
+
+<!-- Edit Modal -->
+<div id="editModal" style="display:none; position:fixed; inset:0; background:rgba(0,0,0,0.5); z-index:1000; align-items:center; justify-content:center;">
+  <div style="background:white; border-radius:12px; padding:24px; max-width:500px; width:90%; margin:auto; position:relative; top:50%; transform:translateY(-50%);">
+    <h3 style="margin-bottom:16px;">Edit Uniform Type</h3>
+    <form method="post" action="{{ url_for('uniforms.settings') }}">
+      <input type="hidden" name="action" value="edit_catalog_item">
+      <input type="hidden" name="item_id" id="edit-item-id">
+      <div style="display:flex; flex-direction:column; gap:12px;">
+        <div>
+          <label class="form-label">Item Name</label>
+          <input type="text" name="item_name" id="edit-item-name" class="form-input" required>
+        </div>
+        <div>
+          <label class="form-label">Category</label>
+          <select name="category" id="edit-category" class="form-input" required>
+            {% for cat in categories %}
+            <option>{{ cat }}</option>
+            {% endfor %}
+          </select>
+        </div>
+        <div>
+          <label class="form-label">Description</label>
+          <input type="text" name="description" id="edit-description" class="form-input">
+        </div>
+        <div style="display:grid; grid-template-columns:1fr 1fr 1fr; gap:12px;">
+          <div>
+            <label class="form-label">Unit Cost ($)</label>
+            <input type="number" name="unit_cost" id="edit-unit-cost" class="form-input" step="0.01" min="0">
+          </div>
+          <div>
+            <label class="form-label">Reorder Point</label>
+            <input type="number" name="reorder_point" id="edit-reorder-point" class="form-input" min="0">
+          </div>
+          <div>
+            <label class="form-label">Status</label>
+            <select name="status" id="edit-status" class="form-input">
+              <option>Active</option>
+              <option>Inactive</option>
+            </select>
+          </div>
+        </div>
+      </div>
+      <div style="display:flex; gap:8px; justify-content:flex-end; margin-top:16px;">
+        <button type="button" class="btn btn-sm btn-outline" onclick="closeEditModal()">Cancel</button>
+        <button type="submit" class="btn btn-sm btn-blue">Save Changes</button>
+      </div>
+    </form>
   </div>
 </div>
 
@@ -106,5 +225,24 @@ function updateReqItemName() {
   var opt = sel.options[sel.selectedIndex];
   document.getElementById('req-item-name-hidden').value = opt.dataset.name || '';
 }
+
+function openEditModal(itemId, name, category, description, unitCost, reorderPoint, status) {
+  document.getElementById('edit-item-id').value = itemId;
+  document.getElementById('edit-item-name').value = name;
+  document.getElementById('edit-category').value = category;
+  document.getElementById('edit-description').value = description;
+  document.getElementById('edit-unit-cost').value = unitCost;
+  document.getElementById('edit-reorder-point').value = reorderPoint;
+  document.getElementById('edit-status').value = status;
+  document.getElementById('editModal').style.display = 'block';
+}
+
+function closeEditModal() {
+  document.getElementById('editModal').style.display = 'none';
+}
+
+document.getElementById('editModal').addEventListener('click', function(e) {
+  if (e.target === this) closeEditModal();
+});
 </script>
 {% endblock %}

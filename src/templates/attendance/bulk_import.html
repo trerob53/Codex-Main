@@ -62,6 +62,20 @@
 
     <button type="submit" class="btn btn-blue">Upload &amp; Import</button>
   </form>
+
+  <div style="margin-top:20px; padding-top:16px; border-top:1px solid #E5E7EB;">
+    <div style="font-weight:600; font-size:13px; margin-bottom:6px;">Duplicate Cleanup</div>
+    <p style="font-size:12px; color:var(--text-light); margin-bottom:8px;">
+      If infractions were accidentally imported twice, use this to remove exact duplicates
+      (same employee, type, and date). The earliest record is kept.
+    </p>
+    <form method="POST" action="{{ url_for('attendance.remove_duplicates') }}">
+      <button type="submit" class="btn btn-sm btn-danger"
+              onclick="return confirm('This will remove all duplicate infractions. Continue?')">
+        Remove Duplicate Infractions
+      </button>
+    </form>
+  </div>
 </div>
 
 {% if result %}

@@ -101,6 +101,34 @@ def create_catalog_item(data: dict, created_by: str = "system") -> str:
     return item_id
 
 
+def update_catalog_item(item_id: str, data: dict) -> bool:
+    """Update an existing catalog item. Returns True if the item was found and updated."""
+    conn = get_conn()
+    row = conn.execute("SELECT * FROM uni_catalog WHERE item_id = ?", (item_id,)).fetchone()
+    if not row:
+        conn.close()
+        return False
+
+    allowed = ["item_name", "category", "description", "unit_cost", "reorder_point", "status"]
+    updates = []
+    params = []
+    for key in allowed:
+        if key in data:
+            updates.append(f"{key} = ?")
+            params.append(data[key])
+
+    if updates:
+        updates.append("updated_at = ?")
+        params.append(_now())
+        params.append(item_id)
+        conn.execute(
+            f"UPDATE uni_catalog SET {', '.join(updates)} WHERE item_id = ?", params
+        )
+        conn.commit()
+    conn.close()
+    return True
+
+
 def delete_catalog_item(item_id: str):
     conn = get_conn()
     conn.execute("DELETE FROM uni_catalog WHERE item_id = ?", (item_id,))
