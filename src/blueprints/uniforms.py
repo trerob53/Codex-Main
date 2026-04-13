@@ -222,7 +222,8 @@ def stock():
     return render_template(
         "uniforms/stock.html",
         **_ctx("Stock", catalog=catalog, low_stock=low_stock,
-               sizes=dm.UNIFORM_SIZES, locations=dm.STORAGE_LOCATIONS),
+               sizes=dm.UNIFORM_SIZES, locations=dm.STORAGE_LOCATIONS,
+               categories=dm.ITEM_CATEGORIES),
     )
 
 

@@ -75,8 +75,9 @@
           {{ type_info.get('label', inf.infraction_type|replace("_", " ")|title) }}
         </td>
         <td>
-          <span style="font-weight:600; color:{% if inf.points_assigned >= 6 %}#DC2626{% elif inf.points_assigned >= 3 %}#D97706{% else %}#059669{% endif %};">
-            {{ inf.points_assigned }}
+          {% set pts = inf.points_assigned if inf.points_assigned is not none else 0 %}
+          <span style="font-weight:600; color:{% if pts >= 6 %}#DC2626{% elif pts >= 3 %}#D97706{% else %}#059669{% endif %};">
+            {{ pts }}
           </span>
         </td>
         <td>{{ inf.infraction_date }}</td>
@@ -91,7 +92,7 @@
           {% endif %}
         </td>
         <td style="white-space:nowrap;">
-          <button class="btn btn-secondary btn-sm" onclick="openEditModal({{ inf.id }}, '{{ inf.infraction_type }}', '{{ inf.infraction_date }}', {{ inf.points_assigned }}, '{{ inf.site }}', '{{ inf.description|replace("'", "\\'") }}')">Edit</button>
+          <button class="btn btn-secondary btn-sm" onclick="openEditModal({{ inf.id }}, '{{ inf.infraction_type }}', '{{ inf.infraction_date }}', {{ pts }}, '{{ inf.site }}', '{{ inf.description|replace("'", "\\'") if inf.description else '' }}')">Edit</button>
           <a href="{{ url_for('attendance.officer_da_options', employee_id=inf.employee_id) }}" class="btn btn-sm" style="background:#B91C1C;color:white;text-decoration:none;" title="Create Attendance DA">DA</a>
           <form method="POST" action="{{ url_for('attendance.delete_infraction', infraction_id=inf.id) }}" style="display:inline;" onsubmit="return confirm('Delete this infraction?');">
             <button type="submit" class="btn btn-danger btn-sm">Delete</button>

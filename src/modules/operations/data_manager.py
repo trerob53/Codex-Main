@@ -98,7 +98,11 @@ def _add_officer_id_alias(d: dict) -> dict:
 
 
 def get_ops_officers(active_only: bool = True) -> list:
-    """Return flex team members from the ops_flex_team table."""
+    """Return officers for Operations pages.
+
+    Queries ops_flex_team first; if empty, falls back to the shared
+    officers table so dropdowns are never unpopulated.
+    """
     conn = get_conn()
     if active_only:
         rows = conn.execute(
@@ -106,12 +110,24 @@ def get_ops_officers(active_only: bool = True) -> list:
         ).fetchall()
     else:
         rows = conn.execute("SELECT * FROM ops_flex_team ORDER BY name").fetchall()
+    if rows:
+        conn.close()
+        return [_add_officer_id_alias(dict(r)) for r in rows]
+    # Fallback to shared officers table
+    if active_only:
+        rows = conn.execute(
+            "SELECT * FROM officers WHERE status = 'Active' ORDER BY name"
+        ).fetchall()
+    else:
+        rows = conn.execute(
+            "SELECT * FROM officers WHERE status != 'Deleted' ORDER BY name"
+        ).fetchall()
     conn.close()
-    return [_add_officer_id_alias(dict(r)) for r in rows]
+    return [dict(r) for r in rows]
 
 
 def get_ops_officer_names() -> list:
-    """Return name list for flex team members."""
+    """Return name list for Operations officers."""
     return [o.get("name", "") for o in get_ops_officers() if o.get("name")]
 
 

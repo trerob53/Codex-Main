@@ -228,8 +228,34 @@ def delete_officer(officer_id: str, updated_by: str = "") -> bool:
     return True
 
 
+def terminate_officer(officer_id: str, updated_by: str = "") -> bool:
+    """Terminate an officer (soft-delete with status 'Terminated').
+
+    The officer record is preserved so foreign-key references (discipline
+    records, reviews, audit trail) remain valid.
+    """
+    conn = get_conn()
+    row = conn.execute("SELECT 1 FROM officers WHERE officer_id = ?", (officer_id,)).fetchone()
+    if not row:
+        conn.close()
+        return False
+    now = _now()
+    conn.execute(
+        "UPDATE officers SET status = 'Terminated', updated_by = ?, updated_at = ? WHERE officer_id = ?",
+        (updated_by, now, officer_id),
+    )
+    conn.commit()
+    conn.close()
+    return True
+
+
 def purge_officer(officer_id: str) -> bool:
-    """Hard-delete an officer record permanently (admin cleanup)."""
+    """Hard-delete an officer record permanently (admin cleanup).
+
+    WARNING: This removes the row entirely. Any discipline records, reviews,
+    or audit entries referencing this officer_id will have broken JOINs.
+    Prefer delete_officer() or terminate_officer() instead.
+    """
     conn = get_conn()
     conn.execute("DELETE FROM officers WHERE officer_id = ?", (officer_id,))
     conn.commit()
