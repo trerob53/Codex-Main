@@ -209,10 +209,15 @@ def discipline():
 @login_required
 @module_access_required(MODULE_ID)
 def edit_infraction(infraction_id):
+    raw_points = request.form.get("points_assigned", "")
+    try:
+        points = float(raw_points) if raw_points != "" else 0.0
+    except (ValueError, TypeError):
+        points = 0.0
     fields = {
         "infraction_type": request.form.get("infraction_type", ""),
         "infraction_date": request.form.get("infraction_date", ""),
-        "points_assigned": float(request.form.get("points_assigned", 0)),
+        "points_assigned": points,
         "site": request.form.get("site", ""),
         "description": request.form.get("description", ""),
     }
@@ -258,7 +263,7 @@ def reviews():
             fields = {
                 "employee_id": request.form.get("employee_id", ""),
                 "triggered_date": request.form.get("triggered_date", ""),
-                "points_at_trigger": float(request.form.get("points_at_trigger", 0)),
+                "points_at_trigger": float(request.form.get("points_at_trigger") or 0),
                 "review_status": "Pending",
             }
             rid = dm.create_review(fields)
@@ -768,7 +773,7 @@ def create_attendance_da(employee_id):
     threshold_level = request.form.get("threshold_level", "")
     threshold_label = request.form.get("threshold_label", "")
     infraction_ids = request.form.get("infraction_ids", "").split(",")
-    cumulative_points = float(request.form.get("cumulative_points", "0"))
+    cumulative_points = float(request.form.get("cumulative_points") or 0)
     narrative = request.form.get("narrative", "")
 
     # Fetch the actual infraction records

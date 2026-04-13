@@ -589,7 +589,7 @@ def course_builder(course_id):
         elif action == "save_test":
             chapter_id = request.form.get("chapter_id", "")
             test_title = request.form.get("test_title", "Quiz")
-            passing_score = float(request.form.get("passing_score", 70))
+            passing_score = float(request.form.get("passing_score") or 70)
             # Parse questions from form
             questions = []
             q_idx = 0
