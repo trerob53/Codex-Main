@@ -16,7 +16,7 @@ from src.web_middleware import login_required, module_access_required, apply_sit
 from src.modules.attendance import data_manager as dm
 from src.modules.attendance.policy_engine import (
     INFRACTION_TYPES, DISCIPLINE_LABELS, THRESHOLDS,
-    POINT_WINDOW_DAYS, calculate_active_points, determine_discipline_level,
+    POINT_WINDOW_DAYS, calculate_active_points,
 )
 from src import audit
 
@@ -737,6 +737,7 @@ def build_attendance_da_narrative(officer_name, threshold_label, infractions, cu
 @module_access_required(MODULE_ID)
 def discipline_tracker(employee_id):
     """Full discipline tracker view for a single officer."""
+    from src.modules.attendance.policy_engine import determine_discipline_level
     officer = _resolve_officer(employee_id)
     infractions = dm.get_infractions_for_employee(employee_id)
     reviews = dm.get_reviews_for_employee(employee_id)
