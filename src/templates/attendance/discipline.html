@@ -91,7 +91,7 @@
           {% endif %}
         </td>
         <td style="white-space:nowrap;">
-          <button class="btn btn-secondary btn-sm" onclick="openEditModal({{ inf.id }}, {{ inf.infraction_type|tojson }}, {{ inf.infraction_date|tojson }}, {{ inf.points_assigned or 0 }}, {{ inf.site|tojson }}, {{ inf.description|tojson }})">Edit</button>
+          <button class="btn btn-secondary btn-sm" onclick="openEditModal({{ inf.id }}, '{{ inf.infraction_type }}', '{{ inf.infraction_date }}', {{ inf.points_assigned or 0 }}, '{{ inf.site }}', '{{ inf.description|default("", true)|replace("'", "\\'") }}')">Edit</button>
           <a href="{{ url_for('attendance.officer_da_options', employee_id=inf.employee_id) }}" class="btn btn-sm" style="background:#B91C1C;color:white;text-decoration:none;" title="Create Attendance DA">DA</a>
           <form method="POST" action="{{ url_for('attendance.delete_infraction', infraction_id=inf.id) }}" style="display:inline;" onsubmit="return confirm('Delete this infraction?');">
             <button type="submit" class="btn btn-danger btn-sm">Delete</button>
