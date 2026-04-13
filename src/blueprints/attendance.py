@@ -209,28 +209,31 @@ def discipline():
 @login_required
 @module_access_required(MODULE_ID)
 def edit_infraction(infraction_id):
-    raw_points = request.form.get("points_assigned", "")
     try:
-        points = float(raw_points) if raw_points != "" else 0.0
-    except (ValueError, TypeError):
-        points = 0.0
-    fields = {
-        "infraction_type": request.form.get("infraction_type", ""),
-        "infraction_date": request.form.get("infraction_date", ""),
-        "points_assigned": points,
-        "site": request.form.get("site", ""),
-        "description": request.form.get("description", ""),
-    }
-    ok = dm.update_infraction(infraction_id, fields)
-    if ok:
-        audit.log_event(
-            MODULE_ID, "update_infraction", _username(),
-            details=f"Updated infraction #{infraction_id}",
-            table_name="ats_infractions", record_id=str(infraction_id), action="update",
-        )
-        flash("Infraction updated.", "success")
-    else:
-        flash("Infraction not found.", "danger")
+        raw_points = request.form.get("points_assigned", "")
+        try:
+            points = float(raw_points) if raw_points != "" else 0.0
+        except (ValueError, TypeError):
+            points = 0.0
+        fields = {
+            "infraction_type": request.form.get("infraction_type", ""),
+            "infraction_date": request.form.get("infraction_date", ""),
+            "points_assigned": points,
+            "site": request.form.get("site", ""),
+            "description": request.form.get("description", ""),
+        }
+        ok = dm.update_infraction(infraction_id, fields)
+        if ok:
+            audit.log_event(
+                MODULE_ID, "update_infraction", _username(),
+                details=f"Updated infraction #{infraction_id}",
+                table_name="ats_infractions", record_id=str(infraction_id), action="update",
+            )
+            flash("Infraction updated.", "success")
+        else:
+            flash("Infraction not found.", "danger")
+    except Exception as e:
+        flash(f"Error updating infraction: {e}", "danger")
     return redirect(url_for("attendance.discipline"))
 
 

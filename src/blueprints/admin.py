@@ -205,7 +205,7 @@ def save_smtp():
     settings_dict = {
         "enabled": "enabled" in request.form,
         "server": request.form.get("server", "").strip(),
-        "port": int(request.form.get("port", 587)),
+        "port": int(request.form.get("port") or 587),
         "use_tls": "use_tls" in request.form,
         "username": request.form.get("username", "").strip(),
         "password": request.form.get("password", "").strip(),
