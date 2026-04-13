@@ -16,7 +16,7 @@ from src.web_middleware import login_required, module_access_required, apply_sit
 from src.modules.attendance import data_manager as dm
 from src.modules.attendance.policy_engine import (
     INFRACTION_TYPES, DISCIPLINE_LABELS, THRESHOLDS,
-    POINT_WINDOW_DAYS, calculate_active_points,
+    POINT_WINDOW_DAYS, calculate_active_points, determine_discipline_level,
 )
 from src import audit
 
@@ -730,6 +730,35 @@ def build_attendance_da_narrative(officer_name, threshold_label, infractions, cu
     lines.append(f"Total active points at time of this action: {cumulative_points}")
 
     return "\n".join(lines)
+
+
+@att_bp.route("/discipline-tracker/<employee_id>")
+@login_required
+@module_access_required(MODULE_ID)
+def discipline_tracker(employee_id):
+    """Full discipline tracker view for a single officer."""
+    officer = _resolve_officer(employee_id)
+    infractions = dm.get_infractions_for_employee(employee_id)
+    reviews = dm.get_reviews_for_employee(employee_id)
+    active_points = calculate_active_points(infractions)
+    discipline_level = determine_discipline_level(active_points)
+    crossings = compute_threshold_crossings(employee_id, infractions, reviews)
+
+    return render_template(
+        "attendance/discipline_tracker.html",
+        **_ctx("discipline"),
+        officer=officer,
+        employee_id=employee_id,
+        infractions=infractions,
+        reviews=reviews,
+        active_points=active_points,
+        discipline_level=discipline_level,
+        discipline_label=DISCIPLINE_LABELS.get(discipline_level, discipline_level),
+        crossings=crossings,
+        infraction_types=INFRACTION_TYPES,
+        thresholds=THRESHOLDS,
+        discipline_labels=DISCIPLINE_LABELS,
+    )
 
 
 @att_bp.route("/officer/<employee_id>/da-options")

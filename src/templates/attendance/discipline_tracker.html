@@ -1,0 +1,200 @@
+{% extends "base.html" %}
+{% block title %}Discipline Tracker — {{ officer.name }} — Cerasus Hub{% endblock %}
+
+{% block tabs %}
+<div class="module-tabs">
+  <a href="{{ url_for('attendance.dashboard') }}" class="module-tab">Dashboard</a>
+  <a href="{{ url_for('attendance.roster') }}" class="module-tab">Roster</a>
+  <a href="{{ url_for('attendance.sites') }}" class="module-tab">Sites</a>
+  <a href="{{ url_for('attendance.log_infraction') }}" class="module-tab">Log Infraction</a>
+  <a href="{{ url_for('attendance.discipline') }}" class="module-tab active">Discipline</a>
+  <a href="{{ url_for('attendance.reviews') }}" class="module-tab">Reviews</a>
+  <a href="{{ url_for('attendance.reports') }}" class="module-tab">Reports</a>
+  <a href="{{ url_for('attendance.analytics') }}" class="module-tab">Analytics</a>
+</div>
+{% endblock %}
+
+{% block content %}
+<div style="margin-bottom:16px;">
+  <a href="{{ url_for('attendance.discipline') }}" style="color:var(--blue); text-decoration:none; font-size:14px;">
+    &larr; Back to Discipline
+  </a>
+</div>
+
+<div class="page-header">
+  <div>
+    <h1 class="page-title">Discipline Tracker</h1>
+    <p class="page-subtitle">Complete discipline history for {{ officer.name }}</p>
+  </div>
+  <div style="display:flex; gap:8px;">
+    <a href="{{ url_for('attendance.log_infraction') }}" class="btn btn-blue">+ Log Infraction</a>
+    <a href="{{ url_for('attendance.officer_da_options', employee_id=employee_id) }}" class="btn btn-secondary">DA Options</a>
+  </div>
+</div>
+
+<!-- Officer Summary Card -->
+<div class="card" style="padding:20px; margin-bottom:24px;">
+  <div style="display:flex; align-items:center; gap:16px; margin-bottom:16px;">
+    {% set initials = (officer.name.split()[0][:1] + (officer.name.split()[-1][:1] if officer.name.split()|length > 1 else ''))|upper %}
+    <div class="avatar" style="background:#3B82F6; width:48px; height:48px; font-size:18px;">{{ initials }}</div>
+    <div>
+      <div style="font-size:20px; font-weight:700;">{{ officer.name }}</div>
+      <div style="font-size:13px; color:var(--text-light);">
+        {{ officer.job_title or 'Security Officer' }}
+        {% if officer.site %} &middot; {{ officer.site }}{% endif %}
+        {% if officer.employee_id %} &middot; ID: {{ officer.employee_id }}{% endif %}
+      </div>
+    </div>
+  </div>
+
+  <div style="display:grid; grid-template-columns:repeat(4, 1fr); gap:16px;">
+    <div style="text-align:center; padding:12px; background:var(--bg-card); border-radius:8px; border:1px solid var(--border);">
+      <div style="font-size:11px; text-transform:uppercase; color:var(--text-light); letter-spacing:0.5px;">Active Points</div>
+      <div style="font-size:28px; font-weight:800; color:{% if active_points >= 8 %}#DC2626{% elif active_points >= 6 %}#D97706{% elif active_points >= 1.5 %}#3B82F6{% else %}#059669{% endif %};">
+        {{ active_points }}
+      </div>
+    </div>
+    <div style="text-align:center; padding:12px; background:var(--bg-card); border-radius:8px; border:1px solid var(--border);">
+      <div style="font-size:11px; text-transform:uppercase; color:var(--text-light); letter-spacing:0.5px;">Discipline Level</div>
+      <div style="font-size:16px; font-weight:700; margin-top:6px;
+        color:{% if discipline_level == 'termination_eligible' or discipline_level == 'termination_flag' %}#DC2626{% elif discipline_level == 'employment_review' %}#D97706{% elif discipline_level == 'written_warning' %}#F59E0B{% elif discipline_level == 'verbal_warning' %}#3B82F6{% else %}#059669{% endif %};">
+        {{ discipline_label }}
+      </div>
+    </div>
+    <div style="text-align:center; padding:12px; background:var(--bg-card); border-radius:8px; border:1px solid var(--border);">
+      <div style="font-size:11px; text-transform:uppercase; color:var(--text-light); letter-spacing:0.5px;">Total Infractions</div>
+      <div style="font-size:28px; font-weight:800;">{{ infractions|length }}</div>
+    </div>
+    <div style="text-align:center; padding:12px; background:var(--bg-card); border-radius:8px; border:1px solid var(--border);">
+      <div style="font-size:11px; text-transform:uppercase; color:var(--text-light); letter-spacing:0.5px;">Reviews</div>
+      <div style="font-size:28px; font-weight:800;">{{ reviews|length }}</div>
+    </div>
+  </div>
+
+  <!-- Points Progress Bar -->
+  <div style="margin-top:16px;">
+    <div style="display:flex; justify-content:space-between; font-size:12px; color:var(--text-light); margin-bottom:4px;">
+      <span>0 pts</span>
+      {% for pts, level in thresholds %}
+      <span>{{ pts }} ({{ discipline_labels.get(level, level) }})</span>
+      {% endfor %}
+    </div>
+    <div style="background:#F3F4F6; border-radius:6px; height:12px; overflow:hidden; position:relative;">
+      <div style="background:{% if active_points >= 10 %}#DC2626{% elif active_points >= 8 %}#D97706{% elif active_points >= 6 %}#F59E0B{% elif active_points >= 1.5 %}#3B82F6{% else %}#10B981{% endif %}; height:100%; width:{{ [active_points * 10, 100]|min }}%; border-radius:6px; transition:width 0.3s;"></div>
+    </div>
+  </div>
+</div>
+
+<!-- Threshold Crossings -->
+{% if crossings %}
+<div class="card" style="padding:20px; margin-bottom:24px;">
+  <div class="section-title">Threshold Crossings</div>
+  <div style="display:flex; flex-direction:column; gap:12px; margin-top:12px;">
+    {% for c in crossings %}
+    <div style="display:flex; align-items:center; gap:12px; padding:12px; border-radius:8px; border:1px solid var(--border); background:var(--bg-card);">
+      <div style="width:10px; height:10px; border-radius:50%; flex-shrink:0;
+        background:{% if c.level == 'termination_eligible' %}#DC2626{% elif c.level == 'employment_review' %}#D97706{% elif c.level == 'written_warning' %}#F59E0B{% else %}#3B82F6{% endif %};"></div>
+      <div style="flex:1;">
+        <div style="font-weight:600;">{{ c.label }}</div>
+        <div style="font-size:12px; color:var(--text-light);">{{ c.crossing_date }} &middot; {{ c.cumulative_points }} pts</div>
+      </div>
+    </div>
+    {% endfor %}
+  </div>
+</div>
+{% endif %}
+
+<!-- Infraction History -->
+<div class="card" style="padding:20px; margin-bottom:24px;">
+  <div class="section-title">Infraction History</div>
+  {% if infractions %}
+  <table class="data-table" style="margin-top:12px;">
+    <thead>
+      <tr>
+        <th>ID</th>
+        <th>Type</th>
+        <th>Date</th>
+        <th>Points</th>
+        <th>Site</th>
+        <th>Description</th>
+        <th>Status</th>
+      </tr>
+    </thead>
+    <tbody>
+      {% for inf in infractions %}
+      <tr>
+        <td>#{{ inf.id }}</td>
+        <td>
+          {% set type_info = infraction_types.get(inf.infraction_type, {}) %}
+          {{ type_info.get('label', inf.infraction_type|replace("_", " ")|title) }}
+        </td>
+        <td>{{ inf.infraction_date }}</td>
+        <td>
+          <span style="font-weight:600; color:{% if (inf.points_assigned or 0) >= 6 %}#DC2626{% elif (inf.points_assigned or 0) >= 3 %}#D97706{% else %}#059669{% endif %};">
+            {{ inf.points_assigned or 0 }}
+          </span>
+        </td>
+        <td>{{ inf.site or '—' }}</td>
+        <td style="max-width:200px; overflow:hidden; text-overflow:ellipsis; white-space:nowrap;" title="{{ inf.description or '' }}">
+          {{ inf.description or '—' }}
+        </td>
+        <td>
+          {% if inf.points_active %}
+            <span class="badge badge-warning">Active</span>
+          {% else %}
+            <span class="badge badge-success">Expired</span>
+          {% endif %}
+          {% if inf.edited %}
+            <span class="badge badge-info">Edited</span>
+          {% endif %}
+        </td>
+      </tr>
+      {% endfor %}
+    </tbody>
+  </table>
+  {% else %}
+  <p style="color:var(--text-light); padding:16px;">No infractions recorded.</p>
+  {% endif %}
+</div>
+
+<!-- Employment Reviews -->
+<div class="card" style="padding:20px;">
+  <div class="section-title">Employment Reviews</div>
+  {% if reviews %}
+  <table class="data-table" style="margin-top:12px;">
+    <thead>
+      <tr>
+        <th>Triggered</th>
+        <th>Points at Trigger</th>
+        <th>Status</th>
+        <th>Reviewed By</th>
+        <th>Review Date</th>
+        <th>Outcome</th>
+      </tr>
+    </thead>
+    <tbody>
+      {% for rev in reviews %}
+      <tr>
+        <td>{{ rev.triggered_date or '—' }}</td>
+        <td style="font-weight:600;">{{ rev.points_at_trigger or 0 }}</td>
+        <td>
+          {% if rev.review_status == 'Pending' %}
+            <span class="badge badge-warning">Pending</span>
+          {% elif rev.review_status == 'Completed' %}
+            <span class="badge badge-success">Completed</span>
+          {% else %}
+            <span class="badge badge-info">{{ rev.review_status }}</span>
+          {% endif %}
+        </td>
+        <td>{{ rev.reviewed_by or '—' }}</td>
+        <td>{{ rev.review_date or '—' }}</td>
+        <td>{{ rev.outcome or '—' }}</td>
+      </tr>
+      {% endfor %}
+    </tbody>
+  </table>
+  {% else %}
+  <p style="color:var(--text-light); padding:16px;">No employment reviews.</p>
+  {% endif %}
+</div>
+{% endblock %}
