@@ -201,7 +201,7 @@
   </div>
 </div>
 
-<script>
+<script nonce="{{ csp_nonce }}">
 function openEditAnchor(s) {
   document.getElementById('editAnchorForm').action = '/module/operations/anchor-schedules/' + s.schedule_id + '/edit';
   document.getElementById('editAnchorOfficer').value = s.officer_name || '';

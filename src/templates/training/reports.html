@@ -183,7 +183,7 @@
   {% endif %}
 </div>
 
-<script>
+<script nonce="{{ csp_nonce }}">
 function exportTable(tableId, filename) {
   var table = document.getElementById(tableId);
   if (!table) return;

@@ -110,7 +110,7 @@
   </form>
 </div>
 
-<script>
+<script nonce="{{ csp_nonce }}">
 function updateOfficerName() {
   var sel = document.getElementById('officer-select');
   var opt = sel.options[sel.selectedIndex];

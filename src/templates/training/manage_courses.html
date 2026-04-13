@@ -221,7 +221,7 @@
   </div>
 </div>
 
-<script>
+<script nonce="{{ csp_nonce }}">
 function filterManage() {
   var query = document.getElementById('manage-search').value.toLowerCase();
   document.querySelectorAll('#manage-table tbody tr').forEach(function(row) {

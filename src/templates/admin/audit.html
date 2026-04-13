@@ -57,7 +57,7 @@
   </div>
 </div>
 
-<script>
+<script nonce="{{ csp_nonce }}">
 function filterAudit() {
   var query = document.getElementById('audit-search').value.toLowerCase();
   var moduleFilter = document.getElementById('module-filter').value;

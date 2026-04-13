@@ -73,7 +73,7 @@
   </div>
 </div>
 
-<script>
+<script nonce="{{ csp_nonce }}">
 document.getElementById('create-sim-modal').addEventListener('click', function(e) {
   if (e.target === this) this.style.display = 'none';
 });

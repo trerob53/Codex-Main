@@ -55,7 +55,7 @@
   </div>
 </div>
 
-<script>
+<script nonce="{{ csp_nonce }}">
 var actPage = 0, actSize = 25;
 function filterTable(query, tableId) {
   var rows = document.getElementById(tableId).querySelectorAll('tbody tr');

@@ -180,7 +180,7 @@
   </div>
 </div>
 
-<script>
+<script nonce="{{ csp_nonce }}">
 function toggleSiteSelect(role) {
   var el = document.getElementById('site-assign-field');
   el.style.display = (role === 'director') ? 'block' : 'none';

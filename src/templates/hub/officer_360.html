@@ -413,7 +413,7 @@
   </div>
 </div>
 
-<script>
+<script nonce="{{ csp_nonce }}">
 function o360Tab(name) {
   document.querySelectorAll('.o360-panel').forEach(p => p.classList.remove('active'));
   document.querySelectorAll('.o360-tab').forEach(t => t.classList.remove('active'));

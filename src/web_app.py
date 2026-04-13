@@ -7,8 +7,9 @@ import os
 import sys
 import time
 import secrets
+import base64
 
-from flask import Flask, session, redirect, url_for, request, render_template, flash
+from flask import Flask, g, session, redirect, url_for, request, render_template, flash
 
 from src.config import (
     APP_NAME, APP_VERSION, COLORS, DARK_COLORS,
@@ -71,9 +72,9 @@ def create_app():
     app.register_blueprint(trn_bp)
     app.register_blueprint(da_bp)
 
-    # After-request: prevent browser caching of authenticated pages (BUG-003/004)
+    # After-request: add security headers including CSP (BUG-003/004)
     @app.after_request
-    def add_no_cache_headers(response):
+    def add_security_headers(response):
         try:
             if session.get("user_id") and not request.path.startswith("/static/"):
                 response.headers["Cache-Control"] = "no-cache, no-store, must-revalidate"
@@ -81,7 +82,34 @@ def create_app():
                 response.headers["Expires"] = "0"
         except Exception:
             pass
+
+        # Content-Security-Policy: prevent unauthorized script injection.
+        # Uses CSP3 granular directives: script-src-elem blocks injected <script>
+        # tags while script-src-attr allows inline event handlers (onclick, etc.).
+        # The script-src fallback covers browsers without CSP3 support.
+        nonce = getattr(g, "csp_nonce", "")
+        if nonce and response.content_type and "text/html" in response.content_type:
+            csp = (
+                f"default-src 'self'; "
+                f"script-src 'self' 'unsafe-inline' 'nonce-{nonce}' https://cdn.jsdelivr.net; "
+                f"script-src-elem 'self' 'nonce-{nonce}' https://cdn.jsdelivr.net; "
+                f"script-src-attr 'unsafe-inline'; "
+                f"style-src 'self' 'unsafe-inline' https://fonts.googleapis.com; "
+                f"font-src 'self' https://fonts.gstatic.com; "
+                f"img-src 'self' data:; "
+                f"connect-src 'self'; "
+                f"frame-src 'none'; "
+                f"object-src 'none'; "
+                f"base-uri 'self'"
+            )
+            response.headers["Content-Security-Policy"] = csp
+
         return response
+
+    # Before-request: generate CSP nonce for each request
+    @app.before_request
+    def generate_csp_nonce():
+        g.csp_nonce = base64.b64encode(secrets.token_bytes(16)).decode("ascii")
 
     # Before-request: redirect unauthenticated users to login + idle timeout
     IDLE_TIMEOUT = 1800  # 30 minutes
@@ -307,6 +335,7 @@ def create_app():
             "active_page": None,
             "active_module": None,
             "user_sites": user_sites,
+            "csp_nonce": getattr(g, "csp_nonce", ""),
         }
 
     return app

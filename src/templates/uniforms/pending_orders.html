@@ -97,7 +97,7 @@
   </div>
 </div>
 
-<script>
+<script nonce="{{ csp_nonce }}">
 function filterTable(query, tableId) { applyFilters(query); }
 function applyFilters(query) {
   if (query === undefined) query = document.querySelector('.filter-search input').value;

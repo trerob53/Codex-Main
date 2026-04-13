@@ -345,7 +345,7 @@
     </div>
   </div>
 
-  <script>
+  <script nonce="{{ csp_nonce }}">
     function togglePw(btn) {
       var input = btn.parentElement.querySelector('input');
       if (input.type === 'password') { input.type = 'text'; btn.textContent = '\u{1F441}'; }

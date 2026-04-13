@@ -153,7 +153,7 @@
   </div>
 </div>
 
-<script>
+<script nonce="{{ csp_nonce }}">
 function openEditModal(id, type, date, points, site, desc) {
   document.getElementById('editForm').action = '/module/attendance/discipline/edit/' + id;
   document.getElementById('edit_type').value = type;

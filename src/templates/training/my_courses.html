@@ -80,7 +80,7 @@
   {% endfor %}
 </div>
 
-<script>
+<script nonce="{{ csp_nonce }}">
 function filterCourses() {
   var query = document.getElementById('course-search').value.toLowerCase();
   var catFilter = document.getElementById('cat-filter').value;

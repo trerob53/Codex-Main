@@ -222,7 +222,7 @@
   </div>
 </div>
 
-<script>
+<script nonce="{{ csp_nonce }}">
 var positionsData = {
   {% for pos in positions %}
   '{{ pos.position_id }}': {

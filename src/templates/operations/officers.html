@@ -245,7 +245,7 @@
   </div>
 </div>
 
-<script>
+<script nonce="{{ csp_nonce }}">
 function openEditOfficer(off) {
   document.getElementById('editOfficerForm').action = '/module/operations/officers/' + off.member_id + '/edit';
   document.getElementById('editOffFirstName').value = off.first_name || '';

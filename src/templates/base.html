@@ -5,7 +5,7 @@
   <meta name="viewport" content="width=device-width, initial-scale=1.0">
   <title>{% block title %}Cerasus Hub{% endblock %}</title>
   <link rel="stylesheet" href="{{ url_for('static', filename='css/style.css') }}">
-  <script src="{{ url_for('static', filename='js/htmx.min.js') }}"></script>
+  <script nonce="{{ csp_nonce }}" src="{{ url_for('static', filename='js/htmx.min.js') }}"></script>
 </head>
 <body>
   {% include "partials/navbar.html" %}
@@ -36,6 +36,6 @@
     &copy; 2026 Cerasus Management Hub &middot; v4.0
   </footer>
 
-  <script src="{{ url_for('static', filename='js/app.js') }}"></script>
+  <script nonce="{{ csp_nonce }}" src="{{ url_for('static', filename='js/app.js') }}"></script>
 </body>
 </html>

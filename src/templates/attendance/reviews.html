@@ -162,7 +162,7 @@
   </div>
 </div>
 
-<script>
+<script nonce="{{ csp_nonce }}">
 function openUpdateModal(id, status, reviewedBy, reviewDate, outcome, notes) {
   document.getElementById('upd_review_id').value = id;
   document.getElementById('upd_status').value = status;

@@ -86,7 +86,7 @@
 </div>
 {% endif %}
 
-<script>
+<script nonce="{{ csp_nonce }}">
 function filterCerts(status, btn) {
   document.querySelectorAll('.trn-filter-tab').forEach(function(t) { t.classList.remove('active'); });
   btn.classList.add('active');

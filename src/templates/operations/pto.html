@@ -171,7 +171,7 @@
   </div>
 </div>
 
-<script>
+<script nonce="{{ csp_nonce }}">
 function openEditPto(id, officer, start, end, type, status, notes) {
   document.getElementById('editPtoForm').action = '/module/operations/pto/' + id + '/edit';
   var select = document.getElementById('editPtoOfficer');
