@@ -273,6 +273,15 @@ def update_review(review_id: int, fields: dict) -> bool:
         conn.close()
         return False
 
+    # Default points_after_outcome to 6.0 for retain outcomes if caller didn't set it.
+    # This matches the DA threshold logic (retain = Final Warning, reset to 6).
+    retained_outcomes = {
+        "retain", "retain_reduce", "Retained", "retained",
+        "probation", "Probation", "Final Warning", "final_warning",
+    }
+    if fields.get("outcome") in retained_outcomes and "points_after_outcome" not in fields:
+        fields["points_after_outcome"] = 6.0
+
     allowed = [
         "review_status", "reviewed_by", "review_date", "outcome",
         "reviewer_notes", "supervisor_comments", "points_after_outcome",
@@ -293,7 +302,13 @@ def update_review(review_id: int, fields: dict) -> bool:
         )
         conn.commit()
 
+    emp_id = existing.get("employee_id", "")
     conn.close()
+
+    # Refresh officer discipline so retain/reset logic takes effect immediately
+    if emp_id:
+        _refresh_officer_discipline(emp_id)
+
     return True
 
 
@@ -916,13 +931,51 @@ def export_reviews_csv() -> str:
 
 # ── Internal Helpers ──────────────────────────────────────────────────
 
+def _latest_retain_review(reviews: list) -> dict | None:
+    """Return the most recent completed review with a retain/probation outcome."""
+    retained_outcomes = {
+        "retain", "retain_reduce", "Retained", "retained",
+        "probation", "Probation", "Final Warning", "final_warning",
+    }
+    latest = None
+    for rev in (reviews or []):
+        if rev.get("review_status") != "Completed":
+            continue
+        if rev.get("outcome", "") not in retained_outcomes:
+            continue
+        rd = rev.get("review_date", "") or ""
+        if not rd:
+            continue
+        if latest is None or rd > (latest.get("review_date", "") or ""):
+            latest = rev
+    return latest
+
+
 def _refresh_officer_discipline(employee_id: str):
-    """Recalculate an officer's active points and discipline level."""
+    """Recalculate an officer's active points and discipline level.
+
+    Honors retain/reset logic: if the officer has a completed review with a
+    retain-type outcome, only infractions after that review count toward
+    active points, plus the review's points_after_outcome (default 6.0).
+    """
     if not employee_id:
         return
 
     infractions = get_infractions_for_employee(employee_id)
-    active_pts = calculate_active_points(infractions)
+    reviews = get_reviews_for_employee(employee_id)
+
+    # Apply retain/reset logic if a retain review exists
+    latest_retain = _latest_retain_review(reviews)
+    if latest_retain and latest_retain.get("review_date"):
+        review_date = latest_retain["review_date"]
+        post_retain = [i for i in infractions
+                       if (i.get("infraction_date") or "") > review_date]
+        active_pts = calculate_active_points(post_retain)
+        baseline = float(latest_retain.get("points_after_outcome") or 6.0)
+        active_pts = round(active_pts + baseline, 2)
+    else:
+        active_pts = calculate_active_points(infractions)
+
     level = determine_discipline_level(active_pts)
     exemptions = count_emergency_exemptions(infractions)
 
@@ -938,8 +991,8 @@ def _refresh_officer_discipline(employee_id: str):
         "emergency_exemptions_used": exemptions,
     })
 
-    # Auto-create employment review if threshold met
-    if should_trigger_review(active_pts):
+    # Auto-create employment review if threshold met (only if no recent retain)
+    if not latest_retain and should_trigger_review(active_pts):
         _auto_create_review_if_needed(employee_id, active_pts)
 
 
