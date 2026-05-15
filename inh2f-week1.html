@@ -1,0 +1,490 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+<meta charset="UTF-8">
+<meta name="viewport" content="width=device-width, initial-scale=1.0, maximum-scale=1.0, user-scalable=no">
+<meta name="apple-mobile-web-app-capable" content="yes">
+<meta name="apple-mobile-web-app-status-bar-style" content="black-translucent">
+<meta name="theme-color" content="#0a0a0a">
+<title>INH2F Week 1 Tracker</title>
+<style>
+  * { box-sizing: border-box; -webkit-tap-highlight-color: transparent; }
+  html, body {
+    margin: 0; padding: 0;
+    background: #0a0a0a; color: #e8e8e8;
+    font-family: -apple-system, BlinkMacSystemFont, "Segoe UI", Roboto, sans-serif;
+    font-size: 16px; line-height: 1.4;
+    min-height: 100vh;
+  }
+  .app { max-width: 720px; margin: 0 auto; padding: 16px 14px 80px; }
+  header {
+    display: flex; align-items: center; justify-content: space-between;
+    margin-bottom: 14px;
+  }
+  h1 {
+    font-size: 18px; margin: 0;
+    letter-spacing: 0.5px; text-transform: uppercase;
+    color: #f0f0f0;
+  }
+  h1 .week { color: #6ee7b7; font-weight: 600; }
+  .download-btn {
+    background: #1a1a1a; color: #6ee7b7;
+    border: 1px solid #2a2a2a; border-radius: 6px;
+    padding: 6px 10px; font-size: 12px; font-weight: 600;
+    cursor: pointer;
+  }
+  .download-btn:active { background: #222; }
+  .tabs {
+    display: grid; grid-template-columns: repeat(4, 1fr);
+    gap: 6px; margin-bottom: 18px;
+  }
+  .tab {
+    background: #141414; color: #888;
+    border: 1px solid #222; border-radius: 8px;
+    padding: 10px 4px; text-align: center;
+    font-size: 13px; font-weight: 600;
+    cursor: pointer;
+    position: relative;
+  }
+  .tab.active { background: #1c2a1c; color: #6ee7b7; border-color: #2d4a2d; }
+  .tab .check { color: #6ee7b7; margin-left: 4px; }
+  .day { display: none; }
+  .day.active { display: block; }
+  .section {
+    background: #111; border: 1px solid #1f1f1f;
+    border-radius: 10px; padding: 14px;
+    margin-bottom: 14px;
+  }
+  .section h2 {
+    font-size: 13px; text-transform: uppercase; letter-spacing: 1px;
+    margin: 0 0 12px; color: #6ee7b7;
+    display: flex; justify-content: space-between; align-items: center;
+  }
+  .section h2 .sub { color: #666; font-weight: 400; font-size: 11px; text-transform: none; letter-spacing: 0; }
+  .row {
+    display: flex; align-items: center; gap: 10px;
+    padding: 8px 0; border-bottom: 1px solid #1a1a1a;
+  }
+  .row:last-child { border-bottom: none; }
+  .check-row {
+    display: flex; align-items: center; gap: 10px;
+    padding: 10px 0; cursor: pointer;
+    border-bottom: 1px solid #1a1a1a;
+  }
+  .check-row:last-child { border-bottom: none; }
+  .check-box {
+    width: 22px; height: 22px; flex-shrink: 0;
+    border: 2px solid #333; border-radius: 5px;
+    display: flex; align-items: center; justify-content: center;
+    background: #0a0a0a;
+  }
+  .check-row.done .check-box { background: #1c5e3a; border-color: #6ee7b7; }
+  .check-row.done .check-box::after {
+    content: "✓"; color: #fff; font-weight: bold; font-size: 14px;
+  }
+  .check-row.done .label { color: #6ee7b7; text-decoration: line-through; text-decoration-color: #333; }
+  .label { flex: 1; font-size: 15px; }
+  .exercise-name {
+    flex: 1; background: transparent; color: #f0f0f0;
+    border: none; font-size: 15px; font-weight: 600;
+    padding: 4px 0; outline: none;
+  }
+  .set-row {
+    display: grid; grid-template-columns: 60px 1fr 1fr;
+    gap: 8px; align-items: center;
+    padding: 6px 0;
+  }
+  .set-label { color: #666; font-size: 12px; text-transform: uppercase; letter-spacing: 1px; }
+  .weight-input, .reps-input, .text-input, textarea {
+    background: #0a0a0a; color: #f0f0f0;
+    border: 1px solid #222; border-radius: 6px;
+    padding: 8px 10px; font-size: 15px;
+    width: 100%; font-family: inherit;
+    outline: none;
+  }
+  .weight-input:focus, .reps-input:focus, .text-input:focus, textarea:focus {
+    border-color: #2d4a2d; background: #0f1410;
+  }
+  .weight-input { font-variant-numeric: tabular-nums; }
+  .input-wrap { position: relative; }
+  .input-wrap .unit {
+    position: absolute; right: 10px; top: 50%; transform: translateY(-50%);
+    color: #555; font-size: 12px; pointer-events: none;
+  }
+  textarea { resize: vertical; min-height: 60px; }
+  .conditioning {
+    display: grid; grid-template-columns: repeat(3, 1fr); gap: 8px;
+  }
+  .cond-btn {
+    background: #141414; color: #888;
+    border: 1px solid #222; border-radius: 8px;
+    padding: 12px 6px; font-size: 14px; font-weight: 600;
+    cursor: pointer; text-align: center;
+  }
+  .cond-btn.active { background: #1c2a1c; color: #6ee7b7; border-color: #2d4a2d; }
+  .amrap-counter {
+    background: #1c2a1c; border: 1px solid #2d4a2d;
+    border-radius: 10px; padding: 14px;
+    display: flex; align-items: center; justify-content: space-between;
+    margin-bottom: 12px;
+  }
+  .amrap-counter .count {
+    font-size: 36px; font-weight: 700; color: #6ee7b7;
+    font-variant-numeric: tabular-nums; min-width: 50px; text-align: center;
+  }
+  .amrap-counter .ctrl {
+    width: 44px; height: 44px; border-radius: 50%;
+    background: #0a0a0a; border: 1px solid #2d4a2d;
+    color: #6ee7b7; font-size: 22px; font-weight: 700;
+    cursor: pointer;
+  }
+  .amrap-counter .ctrl:active { background: #1c2a1c; }
+  .amrap-label { color: #6ee7b7; font-size: 12px; text-transform: uppercase; letter-spacing: 1px; }
+  .complete-btn {
+    width: 100%; background: #1c5e3a; color: #fff;
+    border: none; border-radius: 10px;
+    padding: 16px; font-size: 16px; font-weight: 700;
+    text-transform: uppercase; letter-spacing: 1px;
+    cursor: pointer; margin-top: 8px;
+  }
+  .complete-btn.done { background: #0e3a22; color: #6ee7b7; }
+  .complete-btn:active { transform: scale(0.99); }
+  .add-set {
+    background: transparent; color: #666;
+    border: 1px dashed #333; border-radius: 6px;
+    padding: 8px; width: 100%; font-size: 13px;
+    cursor: pointer; margin-top: 6px;
+  }
+  .add-set:active { color: #6ee7b7; border-color: #2d4a2d; }
+  .small-note {
+    font-size: 12px; color: #555;
+    margin-top: 4px;
+  }
+  .reset-link {
+    display: block; text-align: center; color: #444;
+    font-size: 11px; margin-top: 20px; padding: 8px;
+    text-decoration: underline; cursor: pointer;
+  }
+</style>
+</head>
+<body>
+<div class="app">
+  <header>
+    <h1>INH2F <span class="week">Week 1</span></h1>
+    <button class="download-btn" onclick="downloadSelf()">↓ HTML</button>
+  </header>
+
+  <div class="tabs" id="tabs"></div>
+  <div id="days"></div>
+
+  <span class="reset-link" onclick="resetWeek()">Reset Week 1 data</span>
+</div>
+
+<script>
+  const STORAGE_KEY = "inh2f-week1-v1";
+
+  const dayTemplate = (dayNum) => ({
+    completed: false,
+    warmup: [
+      { label: "Mobility / dynamic warmup", done: false },
+      { label: "Activation drills", done: false },
+      { label: "Ramp-up sets", done: false },
+    ],
+    mainLift: {
+      name: "",
+      sets: [
+        { weight: "", reps: "" },
+        { weight: "", reps: "" },
+        { weight: "", reps: "" },
+      ],
+    },
+    gpp: { name: "", weight: "", reps: "", notes: "" },
+    afsap: { name: "", weight: "", reps: "", notes: "" },
+    amrap: {
+      name: "",
+      weight: "",
+      rounds: 0,
+      notes: "",
+    },
+    conditioning: null, // "A" | "B" | "C"
+    notes: "",
+  });
+
+  function defaultState() {
+    return {
+      days: [dayTemplate(1), dayTemplate(2), dayTemplate(3), dayTemplate(4)],
+      activeDay: 0,
+    };
+  }
+
+  function load() {
+    try {
+      const raw = localStorage.getItem(STORAGE_KEY);
+      if (!raw) return defaultState();
+      const parsed = JSON.parse(raw);
+      if (!parsed.days || parsed.days.length !== 4) return defaultState();
+      return parsed;
+    } catch {
+      return defaultState();
+    }
+  }
+
+  function save() {
+    localStorage.setItem(STORAGE_KEY, JSON.stringify(state));
+  }
+
+  let state = load();
+
+  function render() {
+    renderTabs();
+    renderDays();
+  }
+
+  function renderTabs() {
+    const tabs = document.getElementById("tabs");
+    tabs.innerHTML = "";
+    state.days.forEach((d, i) => {
+      const t = document.createElement("div");
+      t.className = "tab" + (state.activeDay === i ? " active" : "");
+      t.innerHTML = `Day ${i + 1}${d.completed ? '<span class="check">✓</span>' : ""}`;
+      t.onclick = () => { state.activeDay = i; save(); render(); };
+      tabs.appendChild(t);
+    });
+  }
+
+  function renderDays() {
+    const container = document.getElementById("days");
+    container.innerHTML = "";
+    state.days.forEach((d, i) => {
+      const div = document.createElement("div");
+      div.className = "day" + (state.activeDay === i ? " active" : "");
+      div.appendChild(renderDay(d, i));
+      container.appendChild(div);
+    });
+  }
+
+  function renderDay(d, idx) {
+    const wrap = document.createElement("div");
+
+    // Warmup
+    const warmup = document.createElement("div");
+    warmup.className = "section";
+    warmup.innerHTML = `<h2>Warmup <span class="sub">tap to mark</span></h2>`;
+    d.warmup.forEach((w, wi) => {
+      const row = document.createElement("div");
+      row.className = "check-row" + (w.done ? " done" : "");
+      row.innerHTML = `<div class="check-box"></div><div class="label"></div>`;
+      const labelEl = row.querySelector(".label");
+      const input = document.createElement("input");
+      input.className = "exercise-name";
+      input.value = w.label;
+      input.placeholder = "Warmup item";
+      input.oninput = (e) => { w.label = e.target.value; save(); };
+      labelEl.appendChild(input);
+      row.querySelector(".check-box").onclick = () => { w.done = !w.done; save(); render(); };
+      warmup.appendChild(row);
+    });
+    wrap.appendChild(warmup);
+
+    // Main lift
+    const main = document.createElement("div");
+    main.className = "section";
+    main.innerHTML = `<h2>Main Lift <span class="sub">one row per set</span></h2>`;
+    const nameRow = document.createElement("div");
+    nameRow.className = "row";
+    const nameInput = document.createElement("input");
+    nameInput.className = "exercise-name";
+    nameInput.value = d.mainLift.name;
+    nameInput.placeholder = "Exercise name (e.g. Back Squat)";
+    nameInput.oninput = (e) => { d.mainLift.name = e.target.value; save(); };
+    nameRow.appendChild(nameInput);
+    main.appendChild(nameRow);
+
+    d.mainLift.sets.forEach((s, si) => {
+      main.appendChild(setRow(s, si + 1));
+    });
+    const addBtn = document.createElement("button");
+    addBtn.className = "add-set";
+    addBtn.textContent = "+ Add set";
+    addBtn.onclick = () => { d.mainLift.sets.push({ weight: "", reps: "" }); save(); render(); };
+    main.appendChild(addBtn);
+    wrap.appendChild(main);
+
+    // GPP
+    wrap.appendChild(simpleBlock("GPP", d.gpp));
+
+    // AFSAP
+    wrap.appendChild(simpleBlock("AFSAP", d.afsap));
+
+    // AMRAP (Day 4 gets prominent counter)
+    const amrap = document.createElement("div");
+    amrap.className = "section";
+    amrap.innerHTML = `<h2>AMRAP ${idx === 3 ? '<span class="sub">tap to count rounds</span>' : ""}</h2>`;
+
+    if (idx === 3) {
+      const counter = document.createElement("div");
+      counter.className = "amrap-counter";
+      counter.innerHTML = `
+        <button class="ctrl" data-act="dec">−</button>
+        <div style="text-align:center;">
+          <div class="count">${d.amrap.rounds}</div>
+          <div class="amrap-label">rounds</div>
+        </div>
+        <button class="ctrl" data-act="inc">+</button>
+      `;
+      counter.querySelector('[data-act="inc"]').onclick = () => { d.amrap.rounds++; save(); render(); };
+      counter.querySelector('[data-act="dec"]').onclick = () => { if (d.amrap.rounds > 0) d.amrap.rounds--; save(); render(); };
+      amrap.appendChild(counter);
+    }
+
+    const amrapName = document.createElement("input");
+    amrapName.className = "exercise-name";
+    amrapName.value = d.amrap.name;
+    amrapName.placeholder = "AMRAP exercise(s)";
+    amrapName.oninput = (e) => { d.amrap.name = e.target.value; save(); };
+    const amrapNameRow = document.createElement("div");
+    amrapNameRow.className = "row";
+    amrapNameRow.appendChild(amrapName);
+    amrap.appendChild(amrapNameRow);
+
+    const amrapInputs = document.createElement("div");
+    amrapInputs.className = "set-row";
+    amrapInputs.innerHTML = `
+      <div class="set-label">Load</div>
+      <div class="input-wrap"><input class="weight-input" type="text" inputmode="decimal" placeholder="weight"><span class="unit">lb</span></div>
+      <div class="input-wrap"><input class="reps-input" type="text" inputmode="numeric" placeholder="${idx === 3 ? "reps/round" : "reps"}"></div>
+    `;
+    const wIn = amrapInputs.querySelector(".weight-input");
+    wIn.value = d.amrap.weight;
+    wIn.oninput = (e) => { d.amrap.weight = e.target.value; save(); };
+    const rIn = amrapInputs.querySelector(".reps-input");
+    rIn.value = d.amrap.repsPerRound || "";
+    rIn.oninput = (e) => { d.amrap.repsPerRound = e.target.value; save(); };
+    amrap.appendChild(amrapInputs);
+
+    const amrapNotes = document.createElement("textarea");
+    amrapNotes.placeholder = "Notes";
+    amrapNotes.value = d.amrap.notes;
+    amrapNotes.oninput = (e) => { d.amrap.notes = e.target.value; save(); };
+    amrapNotes.style.marginTop = "10px";
+    amrap.appendChild(amrapNotes);
+    wrap.appendChild(amrap);
+
+    // Conditioning
+    const cond = document.createElement("div");
+    cond.className = "section";
+    cond.innerHTML = `<h2>Conditioning <span class="sub">pick one</span></h2>`;
+    const condWrap = document.createElement("div");
+    condWrap.className = "conditioning";
+    ["A", "B", "C"].forEach(opt => {
+      const b = document.createElement("button");
+      b.className = "cond-btn" + (d.conditioning === opt ? " active" : "");
+      b.textContent = opt;
+      b.onclick = () => { d.conditioning = d.conditioning === opt ? null : opt; save(); render(); };
+      condWrap.appendChild(b);
+    });
+    cond.appendChild(condWrap);
+    wrap.appendChild(cond);
+
+    // Notes
+    const notes = document.createElement("div");
+    notes.className = "section";
+    notes.innerHTML = `<h2>Session Notes</h2>`;
+    const ta = document.createElement("textarea");
+    ta.placeholder = "How did it feel? Energy, form cues, soreness…";
+    ta.value = d.notes;
+    ta.oninput = (e) => { d.notes = e.target.value; save(); };
+    notes.appendChild(ta);
+    wrap.appendChild(notes);
+
+    // Complete
+    const btn = document.createElement("button");
+    btn.className = "complete-btn" + (d.completed ? " done" : "");
+    btn.textContent = d.completed ? "✓ Day Complete" : "Mark Day Complete";
+    btn.onclick = () => { d.completed = !d.completed; save(); render(); };
+    wrap.appendChild(btn);
+
+    return wrap;
+  }
+
+  function setRow(s, n) {
+    const row = document.createElement("div");
+    row.className = "set-row";
+    row.innerHTML = `
+      <div class="set-label">Set ${n}</div>
+      <div class="input-wrap"><input class="weight-input" type="text" inputmode="decimal" placeholder="weight"><span class="unit">lb</span></div>
+      <div class="input-wrap"><input class="reps-input" type="text" inputmode="numeric" placeholder="reps"></div>
+    `;
+    const wIn = row.querySelector(".weight-input");
+    wIn.value = s.weight;
+    wIn.oninput = (e) => { s.weight = e.target.value; save(); };
+    const rIn = row.querySelector(".reps-input");
+    rIn.value = s.reps;
+    rIn.oninput = (e) => { s.reps = e.target.value; save(); };
+    return row;
+  }
+
+  function simpleBlock(title, obj) {
+    const sec = document.createElement("div");
+    sec.className = "section";
+    sec.innerHTML = `<h2>${title}</h2>`;
+
+    const nameRow = document.createElement("div");
+    nameRow.className = "row";
+    const nameInput = document.createElement("input");
+    nameInput.className = "exercise-name";
+    nameInput.value = obj.name;
+    nameInput.placeholder = `${title} exercise`;
+    nameInput.oninput = (e) => { obj.name = e.target.value; save(); };
+    nameRow.appendChild(nameInput);
+    sec.appendChild(nameRow);
+
+    const inputs = document.createElement("div");
+    inputs.className = "set-row";
+    inputs.innerHTML = `
+      <div class="set-label">Load</div>
+      <div class="input-wrap"><input class="weight-input" type="text" inputmode="decimal" placeholder="weight"><span class="unit">lb</span></div>
+      <div class="input-wrap"><input class="reps-input" type="text" inputmode="numeric" placeholder="reps"></div>
+    `;
+    const wIn = inputs.querySelector(".weight-input");
+    wIn.value = obj.weight;
+    wIn.oninput = (e) => { obj.weight = e.target.value; save(); };
+    const rIn = inputs.querySelector(".reps-input");
+    rIn.value = obj.reps;
+    rIn.oninput = (e) => { obj.reps = e.target.value; save(); };
+    sec.appendChild(inputs);
+
+    const ta = document.createElement("textarea");
+    ta.placeholder = "Notes";
+    ta.value = obj.notes;
+    ta.oninput = (e) => { obj.notes = e.target.value; save(); };
+    ta.style.marginTop = "10px";
+    sec.appendChild(ta);
+
+    return sec;
+  }
+
+  function downloadSelf() {
+    const html = document.documentElement.outerHTML;
+    const blob = new Blob(["<!DOCTYPE html>\n" + html], { type: "text/html" });
+    const url = URL.createObjectURL(blob);
+    const a = document.createElement("a");
+    a.href = url;
+    a.download = "inh2f-week1.html";
+    document.body.appendChild(a);
+    a.click();
+    document.body.removeChild(a);
+    setTimeout(() => URL.revokeObjectURL(url), 1000);
+  }
+
+  function resetWeek() {
+    if (!confirm("Erase all Week 1 data on this device?")) return;
+    localStorage.removeItem(STORAGE_KEY);
+    state = defaultState();
+    render();
+  }
+
+  render();
+</script>
+</body>
+</html>
