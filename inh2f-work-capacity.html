@@ -1,0 +1,908 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+<meta charset="UTF-8">
+<meta name="viewport" content="width=device-width, initial-scale=1.0, viewport-fit=cover">
+<meta name="apple-mobile-web-app-capable" content="yes">
+<meta name="apple-mobile-web-app-status-bar-style" content="black-translucent">
+<meta name="theme-color" content="#0a0a0a">
+<title>INH2F Tier I — Work Capacity</title>
+<style>
+  *, *::before, *::after { box-sizing: border-box; -webkit-tap-highlight-color: transparent; }
+  html, body {
+    margin: 0; padding: 0;
+    background: #0a0a0a; color: #e8e8e8;
+    font-family: -apple-system, BlinkMacSystemFont, "Segoe UI", Roboto, sans-serif;
+    font-size: 15px; line-height: 1.4;
+    overflow-x: hidden;
+    -webkit-text-size-adjust: 100%;
+  }
+  body { padding: env(safe-area-inset-top) env(safe-area-inset-right) env(safe-area-inset-bottom) env(safe-area-inset-left); }
+  .app { max-width: 760px; margin: 0 auto; padding: 10px 12px 160px; }
+
+  /* Header */
+  header { display: flex; align-items: center; justify-content: space-between; margin-bottom: 10px; gap: 10px; }
+  .title { display: flex; flex-direction: column; min-width: 0; }
+  .title .brand { font-size: 10px; letter-spacing: 2px; color: #888; text-transform: uppercase; }
+  .title .h1 { font-size: 17px; font-weight: 700; letter-spacing: 0.5px; color: #fff; text-transform: uppercase; white-space: nowrap; overflow: hidden; text-overflow: ellipsis; }
+  .title .h1 .accent { color: #6ee7b7; }
+  .download-btn { background: #1a1a1a; color: #6ee7b7; border: 1px solid #2a2a2a; border-radius: 6px; padding: 8px 10px; font-size: 11px; font-weight: 700; cursor: pointer; white-space: nowrap; }
+
+  /* Week selector */
+  .weeks { display: grid; grid-template-columns: repeat(4, 1fr); gap: 5px; margin-bottom: 8px; }
+  .wk { background: #141414; color: #777; border: 1px solid #222; border-radius: 6px; padding: 8px 2px; text-align: center; font-size: 11px; font-weight: 700; cursor: pointer; letter-spacing: 0.5px; }
+  .wk.active { background: #1c2a1c; color: #6ee7b7; border-color: #2d4a2d; }
+  .wk .deload { display: block; font-size: 9px; color: #d97c5a; letter-spacing: 1px; margin-top: 1px; }
+  .wk.active .deload { color: #f0a78a; }
+
+  /* Meta inputs */
+  .meta { display: grid; grid-template-columns: repeat(3, 1fr); gap: 5px; margin-bottom: 10px; }
+  .meta .f { background: #111; border: 1px solid #1f1f1f; border-radius: 6px; padding: 6px 8px; min-width: 0; }
+  .meta .f label { display: block; font-size: 8px; letter-spacing: 1.2px; color: #6ee7b7; text-transform: uppercase; margin-bottom: 2px; }
+  .meta .f input { width: 100%; background: transparent; color: #f0f0f0; border: none; outline: none; font-size: 13px; font-family: inherit; padding: 0; min-width: 0; }
+
+  /* Day tabs */
+  .tabs { display: grid; grid-template-columns: repeat(4, 1fr); gap: 5px; margin-bottom: 14px; }
+  .tab { background: #141414; color: #888; border: 1px solid #222; border-radius: 8px; padding: 10px 4px; text-align: center; font-size: 13px; font-weight: 700; cursor: pointer; min-width: 0; }
+  .tab.active { background: #1c2a1c; color: #6ee7b7; border-color: #2d4a2d; }
+  .tab .check { margin-left: 4px; color: #6ee7b7; }
+
+  /* Sections */
+  .day { display: none; }
+  .day.active { display: block; }
+  .section { background: #111; border: 1px solid #1f1f1f; border-radius: 10px; padding: 12px; margin-bottom: 12px; }
+  .section.amrap-sec { border-color: #2d4a2d; background: linear-gradient(180deg, #0f1410, #0e0e0e); }
+  .section-head { display: flex; justify-content: space-between; align-items: center; gap: 8px; flex-wrap: wrap; margin-bottom: 4px; }
+  .section h2 { font-size: 12px; text-transform: uppercase; letter-spacing: 1.5px; margin: 0; color: #6ee7b7; }
+  .section .badge { font-size: 10px; color: #d97c5a; background: #2a1810; border: 1px solid #4a2818; border-radius: 4px; padding: 2px 6px; font-weight: 700; letter-spacing: 0.5px; }
+  .meta-line { color: #888; font-size: 11px; font-style: italic; margin-bottom: 6px; }
+  .timer-line { color: #aaa; font-size: 11px; margin-bottom: 8px; }
+
+  /* Exercise blocks */
+  .exercise { border-top: 1px solid #1a1a1a; padding: 10px 0; }
+  .exercise:first-of-type { border-top: none; padding-top: 4px; }
+  .ex-head { display: flex; justify-content: space-between; align-items: flex-start; gap: 8px; margin-bottom: 4px; }
+  .ex-name { font-size: 14px; font-weight: 600; color: #f5f5f5; flex: 1; min-width: 0; }
+  .ex-tag { background: #1a1a1a; color: #6ee7b7; border: 1px solid #2d4a2d; border-radius: 4px; padding: 2px 6px; font-size: 10px; font-weight: 700; white-space: nowrap; }
+  .ex-detail { font-size: 12px; color: #888; margin-bottom: 6px; }
+  .ex-prescribed { font-size: 12px; color: #6ee7b7; margin-bottom: 6px; font-weight: 600; }
+
+  /* Inputs */
+  .input-wrap { position: relative; min-width: 0; }
+  .input-wrap input { width: 100%; background: #0a0a0a; color: #f0f0f0; border: 1px solid #222; border-radius: 6px; padding: 9px 28px 9px 10px; font-size: 14px; font-family: inherit; outline: none; font-variant-numeric: tabular-nums; min-width: 0; }
+  .input-wrap input:focus { border-color: #2d4a2d; background: #0f1410; }
+  .input-wrap .unit { position: absolute; right: 8px; top: 50%; transform: translateY(-50%); color: #555; font-size: 11px; pointer-events: none; }
+  .input-wrap.no-unit input { padding-right: 10px; }
+  .input-wrap .target { position: absolute; right: 28px; top: 50%; transform: translateY(-50%); color: #3a3a3a; font-size: 11px; pointer-events: none; font-style: italic; }
+  .input-wrap input:not(:placeholder-shown) ~ .target { display: none; }
+
+  /* Set rows */
+  .set-row { display: grid; grid-template-columns: 56px 1fr 1fr 70px; gap: 5px; align-items: center; padding: 4px 0; }
+  .set-row.no-pct { grid-template-columns: 56px 1fr 1fr; }
+  .set-row.no-reps { grid-template-columns: 56px 1fr 70px; }
+  .row-label { color: #888; font-size: 11px; text-transform: uppercase; letter-spacing: 1px; text-align: center; font-weight: 600; }
+  .row-label .reps-tag { color: #6ee7b7; display: block; font-size: 9px; font-weight: 400; letter-spacing: 0.5px; }
+
+  /* Checkboxes */
+  .check-row { display: flex; align-items: center; gap: 10px; padding: 8px 0; cursor: pointer; border-top: 1px solid #1a1a1a; }
+  .check-row:first-of-type { border-top: none; }
+  .check-box { width: 22px; height: 22px; flex-shrink: 0; border: 2px solid #333; border-radius: 5px; display: flex; align-items: center; justify-content: center; background: #0a0a0a; }
+  .check-row.done .check-box { background: #1c5e3a; border-color: #6ee7b7; }
+  .check-row.done .check-box::after { content: "✓"; color: #fff; font-weight: bold; font-size: 14px; }
+  .check-row.done .label { color: #6ee7b7; text-decoration: line-through; text-decoration-color: #333; }
+  .label { flex: 1; font-size: 14px; min-width: 0; }
+
+  /* Textarea */
+  textarea { width: 100%; background: #0a0a0a; color: #f0f0f0; border: 1px solid #222; border-radius: 6px; padding: 9px 10px; font-size: 14px; font-family: inherit; resize: vertical; min-height: 60px; outline: none; }
+  textarea:focus { border-color: #2d4a2d; background: #0f1410; }
+
+  /* Timer buttons */
+  .timer-btns { display: flex; gap: 6px; flex-wrap: wrap; margin-top: 8px; }
+  .tbtn { background: #1a1a1a; color: #6ee7b7; border: 1px solid #2d4a2d; border-radius: 6px; padding: 8px 12px; font-size: 12px; font-weight: 700; cursor: pointer; text-transform: uppercase; letter-spacing: 0.5px; flex: 1; min-width: 80px; }
+  .tbtn:active { background: #1c2a1c; }
+  .tbtn.warning { color: #d97c5a; border-color: #4a2818; }
+
+  /* Conditioning options */
+  .conditioning-options { display: flex; flex-direction: column; gap: 6px; }
+  .cond-option { display: flex; align-items: flex-start; gap: 10px; background: #0e0e0e; border: 1px solid #1f1f1f; border-radius: 8px; padding: 10px; cursor: pointer; }
+  .cond-option.active { background: #142014; border-color: #2d4a2d; }
+  .cond-radio { width: 20px; height: 20px; border-radius: 50%; border: 2px solid #333; flex-shrink: 0; margin-top: 2px; display: flex; align-items: center; justify-content: center; }
+  .cond-option.active .cond-radio { border-color: #6ee7b7; }
+  .cond-option.active .cond-radio::after { content: ""; width: 10px; height: 10px; border-radius: 50%; background: #6ee7b7; }
+  .cond-body { flex: 1; min-width: 0; }
+  .cond-name { font-size: 14px; font-weight: 600; color: #f0f0f0; }
+  .cond-option.active .cond-name { color: #6ee7b7; }
+  .cond-detail { font-size: 12px; color: #888; margin-top: 2px; }
+  .cond-target { font-size: 11px; color: #6ee7b7; margin-top: 4px; font-weight: 600; letter-spacing: 0.5px; }
+
+  /* AMRAP counter */
+  .amrap-counter { background: linear-gradient(135deg, #1c2a1c, #0f1f0f); border: 1px solid #2d4a2d; border-radius: 12px; padding: 16px; display: flex; align-items: center; justify-content: space-between; margin-bottom: 10px; }
+  .amrap-counter .count { font-size: 48px; font-weight: 800; color: #6ee7b7; font-variant-numeric: tabular-nums; min-width: 60px; text-align: center; line-height: 1; }
+  .amrap-counter .label { color: #6ee7b7; font-size: 10px; text-transform: uppercase; letter-spacing: 2px; margin-top: 4px; }
+  .amrap-counter .ctrl { width: 54px; height: 54px; border-radius: 50%; background: #0a0a0a; border: 2px solid #2d4a2d; color: #6ee7b7; font-size: 28px; font-weight: 700; cursor: pointer; flex-shrink: 0; }
+  .amrap-counter .ctrl:active { background: #1c2a1c; }
+
+  /* Cardio pick */
+  .cardio-pick { display: grid; grid-template-columns: repeat(2, 1fr); gap: 5px; margin-top: 6px; }
+  .cardio-pick .cp { background: #0e0e0e; border: 1px solid #1f1f1f; border-radius: 6px; padding: 8px; cursor: pointer; font-size: 12px; text-align: center; color: #aaa; }
+  .cardio-pick .cp.active { background: #142014; border-color: #2d4a2d; color: #6ee7b7; }
+  .cardio-pick .cp .target { display: block; font-size: 10px; color: #666; margin-top: 2px; }
+  .cardio-pick .cp.active .target { color: #6ee7b7; }
+
+  /* Complete button */
+  .complete-btn { width: 100%; background: #1c5e3a; color: #fff; border: none; border-radius: 10px; padding: 16px; font-size: 15px; font-weight: 700; text-transform: uppercase; letter-spacing: 1.5px; cursor: pointer; margin-top: 4px; }
+  .complete-btn.done { background: #0e3a22; color: #6ee7b7; }
+
+  /* Footer */
+  .footer { text-align: center; margin-top: 20px; padding: 14px; color: #6ee7b7; font-weight: 700; letter-spacing: 3px; font-size: 12px; text-transform: uppercase; border-top: 1px solid #1f1f1f; }
+  .reset-link { display: block; text-align: center; color: #444; font-size: 11px; margin-top: 10px; padding: 8px; text-decoration: underline; cursor: pointer; }
+
+  /* Floating Timer */
+  .timer-overlay {
+    position: fixed; bottom: 0; left: 0; right: 0;
+    background: #0e0e0e; border-top: 2px solid #2d4a2d;
+    padding: 14px 14px calc(14px + env(safe-area-inset-bottom));
+    transform: translateY(100%); transition: transform 0.25s ease;
+    z-index: 100; box-shadow: 0 -8px 24px rgba(0,0,0,0.6);
+  }
+  .timer-overlay.active { transform: translateY(0); }
+  .timer-row { display: flex; align-items: center; justify-content: space-between; gap: 12px; }
+  .timer-info { flex: 1; min-width: 0; }
+  .timer-label { font-size: 10px; color: #6ee7b7; text-transform: uppercase; letter-spacing: 2px; }
+  .timer-display { font-size: 42px; font-weight: 800; color: #f0f0f0; font-variant-numeric: tabular-nums; line-height: 1; margin-top: 2px; }
+  .timer-display.alert { color: #d97c5a; animation: pulse 0.6s ease-in-out infinite alternate; }
+  .timer-display.done { color: #6ee7b7; }
+  @keyframes pulse { from { opacity: 1; } to { opacity: 0.5; } }
+  .timer-actions { display: flex; gap: 6px; }
+  .timer-actions button { width: 44px; height: 44px; border-radius: 50%; background: #1a1a1a; color: #f0f0f0; border: 1px solid #333; font-size: 18px; font-weight: 700; cursor: pointer; }
+  .timer-actions button.primary { background: #1c5e3a; color: #fff; border-color: #2d4a2d; }
+  .timer-actions button.danger { background: #2a1810; color: #d97c5a; border-color: #4a2818; }
+
+  /* Narrow phones */
+  @media (max-width: 360px) {
+    .app { padding: 8px 8px 160px; }
+    .meta { grid-template-columns: 1fr 1fr; }
+    .meta .f:nth-child(3) { grid-column: span 2; }
+    .set-row { grid-template-columns: 48px 1fr 1fr 60px; gap: 4px; }
+    .set-row.no-pct { grid-template-columns: 48px 1fr 1fr; }
+  }
+</style>
+</head>
+<body>
+<div class="app">
+  <header>
+    <div class="title">
+      <span class="brand">INH2F · Tier I</span>
+      <span class="h1">Work <span class="accent">Capacity</span></span>
+    </div>
+    <button class="download-btn" onclick="downloadSelf()">↓ HTML</button>
+  </header>
+
+  <div class="weeks" id="weeks"></div>
+
+  <div class="meta">
+    <div class="f"><label>Max</label><input data-meta="max" type="text"></div>
+    <div class="f"><label>ACFT</label><input data-meta="acft" type="text"></div>
+    <div class="f"><label>Injury / Profiles</label><input data-meta="injury" type="text"></div>
+  </div>
+
+  <div class="tabs" id="tabs"></div>
+  <div id="days"></div>
+
+  <div class="footer">Consistency = Results!</div>
+  <span class="reset-link" onclick="resetAll()">Reset all tracker data</span>
+</div>
+
+<!-- Floating timer overlay -->
+<div class="timer-overlay" id="timer">
+  <div class="timer-row">
+    <div class="timer-info">
+      <div class="timer-label" id="tLabel">Timer</div>
+      <div class="timer-display" id="tDisplay">0:00</div>
+    </div>
+    <div class="timer-actions">
+      <button id="tToggle" class="primary">▶</button>
+      <button id="tReset">↻</button>
+      <button id="tClose" class="danger">✕</button>
+    </div>
+  </div>
+</div>
+
+<script>
+// ====================================================================
+// Program Data — Tier I Work Capacity, Weeks 1-4
+// ====================================================================
+const COND_LOW_IMPACT = {
+  title: "Conditioning · Low Impact",
+  options: [
+    { key: "A", name: "Treadmill", detail: "Incline @ 10 dg · Speed @ 3 or higher", target: "x15 minutes+ · Brisk Pace", durationSec: 15 * 60 },
+    { key: "B", name: "Walking", detail: "Terrain = Your Choice", target: "x20 minutes+ · Brisk Pace", durationSec: 20 * 60 },
+    { key: "C", name: "Your Choice", detail: "Implement of your choice. Keep it light/moderate intensity", target: "x15 minutes+ · Steady Pace", durationSec: 15 * 60 },
+  ],
+};
+const COND_ZONE2 = {
+  title: "Conditioning · Zone 2",
+  meta: "Breathe strictly through your nose — this will determine pace",
+  options: [
+    { key: "A", name: "Running", target: "x20 minutes+ · Zone 2", durationSec: 20 * 60 },
+    { key: "B", name: "Bike", target: "x20 minutes+ · Zone 2", durationSec: 20 * 60 },
+    { key: "C", name: "Rower", target: "x20 minutes+ · Zone 2", durationSec: 20 * 60 },
+  ],
+};
+const AMRAP_CARDIO = [
+  { name: "Assault Bike", target: "x25 calories" },
+  { name: "Spin Bike", target: "x25 calories" },
+  { name: "Rower", target: "x20 calories" },
+  { name: "Ski-Erg", target: "x15 calories" },
+  { name: "Jogging", target: ":60 seconds" },
+];
+
+function day1(w) {
+  const cfg = { 1: { sets: 4, rounds: 2, timed: false }, 2: { sets: 5, rounds: 3, timed: true }, 3: { sets: 5, rounds: 3, timed: true }, 4: { sets: 3, rounds: 2, timed: true } }[w];
+  return {
+    title: "Day 1",
+    warmup: {
+      title: "Wenning Warmup", warmupSec: 6 * 60,
+      items: [
+        { name: "Plank Series", detail: "Front Plank → Side Plank (L & R)", prescribed: "2x20 sec/ea", tag: "BW" },
+        { name: "Air Squat", detail: "Squat slightly below parallel", prescribed: "2x20", tag: "BW+Band" },
+        { name: "Seated BLC", detail: "BLC = Banded Leg Curl", prescribed: "2x20", tag: "Light Band" },
+      ],
+    },
+    main: {
+      title: "Main Work", meta: "Record Weight / Set" + (cfg.timed ? " · Time/set = 1:30 · Complete 2a + 2b in allotted time" : ""),
+      timePerSetSec: cfg.timed ? 90 : null,
+      exercises: [
+        { name: "Goblet Squat", detail: "Use DB / KB / Wtd Vest", sets: Array(cfg.sets).fill({ reps: "x10", target: "Open" }), timed: cfg.timed },
+        { name: "MRB Clamshells", detail: "Band above knee", prescribed: "3x10 ea", tag: "Light" },
+      ],
+    },
+    circuit: {
+      title: `GPP Circuit · x${cfg.rounds} Rounds`, meta: "Limited Rest b/w exercises — 30–60 sec.",
+      restSec: [30, 60], rounds: cfg.rounds,
+      exercises: [
+        { name: "Hyperextensions", detail: "Squeeze glutes · Push hips", prescribed: "x15", tag: "BW or Wtd" },
+        { name: "KB Suitcase Holds", detail: "Squeeze glutes · Keep core stable", prescribed: "x30 sec/ea" },
+        { name: "Seated High Band Row", detail: "Alternate = Lat Pulldown", prescribed: "x12-15" },
+        { name: "Hanging Knee Tucks", prescribed: "x5-8" },
+      ],
+    },
+    conditioning: COND_LOW_IMPACT,
+  };
+}
+
+function day2(w) {
+  const cfg = { 1: { rounds: "x3" }, 2: { rounds: "x3-4" }, 3: { rounds: "x3-4" }, 4: { rounds: "x2" } }[w];
+  return {
+    title: "Day 2",
+    warmup: {
+      title: "Wenning Warmup", warmupSec: 6 * 60,
+      items: [
+        { name: "Horizontal Row", detail: "Implement your choice — DB / BB / Cable / etc.", prescribed: "2x20", tag: "Light" },
+        { name: "Face Pulls", detail: "Banded (or) Cable", prescribed: "2x20", tag: "Light" },
+        { name: "Tricep Pushdowns", detail: "Banded (or) Cable", prescribed: "2x20", tag: "Light" },
+      ],
+    },
+    circuit: {
+      title: `GPP Circuit · ${cfg.rounds} Rounds`, meta: "Limited Rest b/w exercises — 30–60 sec. · Record Highest Weight",
+      restSec: [30, 60],
+      exercises: [
+        { name: "DB Incline Row", detail: "Bench @ 2 clicks (150 dg, Incline)", prescribed: "x12" },
+        { name: "DB Incline Bench", detail: "Bench @ 2 clicks (150 dg, Incline)", prescribed: "x10" },
+        { name: "Tricep Pushdowns", detail: "Cable OR Banded", prescribed: "x12-15" },
+        { name: "DB Shrugs", prescribed: "x12-15" },
+      ],
+    },
+    afsap: {
+      title: "AFSAP Circuit", meta: "As Few Sets As Possible · Push close to no failure on each set, then move to the next exercise.",
+      exercises: [
+        { name: "Pushups", detail: "Traditional (or) Leaning (or) Kneeling", prescribed: "x40 AFSAP", tag: "BW" },
+        { name: "BPA → OH → Chest", detail: "BPA = Band Pull Aparts · Overhand", prescribed: "x60 AFSAP", tag: "Light" },
+      ],
+    },
+    conditioning: COND_ZONE2,
+  };
+}
+
+function day3(w) {
+  const cfg = { 1: { sets: 4, rounds: 2, timed: false }, 2: { sets: 5, rounds: 3, timed: true }, 3: { sets: 5, rounds: 3, timed: true }, 4: { sets: 3, rounds: 2, timed: true } }[w];
+  return {
+    title: "Day 3",
+    warmup: {
+      title: "Wenning Warmup", warmupSec: 6 * 60,
+      items: [
+        { name: "Plank Series", detail: "Front Plank → Side Plank (L & R)", prescribed: "2x20 sec/ea", tag: "BW" },
+        { name: "FLR + Shoulder Taps", detail: "FLR = Front Leaning Rest", prescribed: "2x8 ea", tag: "BW" },
+        { name: "Shrugs", detail: "BB / DB / Banded", prescribed: "2x20", tag: "Light" },
+      ],
+    },
+    main: {
+      title: "Main Work", meta: "Record Weight / Set" + (cfg.timed ? " · Time/set = 1:30 · Complete 2a + 2b in allotted time" : ""),
+      timePerSetSec: cfg.timed ? 90 : null,
+      exercises: [
+        { name: "KB Sumo Deadlift", sets: Array(cfg.sets).fill({ reps: "x8", target: "Open" }), timed: cfg.timed },
+        { name: "MRB Kickbacks", detail: "Reach & Squeeze", prescribed: "3x8 ea", tag: "Light" },
+      ],
+    },
+    circuit: {
+      title: `GPP Circuit · x${cfg.rounds} Rounds`, meta: "Limited Rest b/w exercises — 30–60 sec. · Record Highest Weight",
+      restSec: [30, 60], rounds: cfg.rounds,
+      exercises: [
+        { name: "Goblet Split Squat", detail: "Use DB / KB / Sandbags", prescribed: "x8 ea" },
+        { name: "Prone BLC", detail: "Alternate = Ham Curl Machine", prescribed: "x10" },
+        { name: "Lat Pulldowns", detail: "Alternate = Lat Pulldown", prescribed: "x10-12" },
+        { name: "Banded Face Pulls", prescribed: "x15" },
+      ],
+    },
+    conditioning: COND_LOW_IMPACT,
+  };
+}
+
+function day4(w) {
+  const amrapMin = w === 1 ? 10 : 15;
+  return {
+    title: "Day 4",
+    warmup: {
+      title: "Wenning Warmup", warmupSec: 6 * 60,
+      items: [
+        { name: "Front Plank", prescribed: "3x30 sec", tag: "BW" },
+        { name: "Russian Twists", prescribed: "3x20", tag: "BW" },
+        { name: "BPA - UH → Chest", detail: "Overhand → Chest", prescribed: "3x20", tag: "Light" },
+      ],
+    },
+    amrap: {
+      title: `AMRAP Circuit · x${amrapMin} minutes`, meta: "As Many Rounds As Possible · Record rounds completed",
+      durationSec: amrapMin * 60,
+      exercises: [
+        { name: "HK SA DB OHP", detail: "HK = Half Kneeling · SA = Single Arm · OHP = Overhead Press", prescribed: w === 4 ? "x8 ea" : "x10 ea" },
+        { name: "SA DB Row", detail: "Staggered Stance · Brace on either a stable surface (let elbow on your thigh)", prescribed: w === 4 ? "x8 ea" : "x10 ea" },
+        { name: "Suitcase Carry", detail: "Keep core stable & shoulders even", prescribed: "x100 ft/ea" },
+      ],
+      cardio: AMRAP_CARDIO,
+    },
+    conditioning: COND_ZONE2,
+  };
+}
+
+const PROGRAM = {
+  weeks: [
+    { label: "Week 1", deload: false, days: [day1(1), day2(1), day3(1), day4(1)] },
+    { label: "Week 2", deload: false, days: [day1(2), day2(2), day3(2), day4(2)] },
+    { label: "Week 3", deload: false, days: [day1(3), day2(3), day3(3), day4(3)] },
+    { label: "Week 4", deload: true,  days: [day1(4), day2(4), day3(4), day4(4)] },
+  ],
+};
+
+// ====================================================================
+// State
+// ====================================================================
+const STORAGE_KEY = "inh2f-tier1-wc-v3";
+
+function blankExerciseState(ex) {
+  if (ex.sets) return { sets: ex.sets.map(() => ({ weight: "", reps: "", pct: "" })) };
+  return { weight: "", reps: "", pct: "" };
+}
+function blankDayState(d) {
+  return {
+    completed: false,
+    warmup: d.warmup.items.map(() => ({ done: false, weight: "", reps: "", pct: "" })),
+    main: (d.main ? d.main.exercises : []).map(blankExerciseState),
+    circuit: (d.circuit ? d.circuit.exercises : []).map(blankExerciseState),
+    afsap: (d.afsap ? d.afsap.exercises : []).map(blankExerciseState),
+    amrap: d.amrap ? { rounds: 0, exercises: d.amrap.exercises.map(() => ({ weight: "" })), cardio: null } : null,
+    conditioning: null,
+    notes: "",
+  };
+}
+function blankState() {
+  return {
+    meta: { max: "", acft: "", injury: "" },
+    activeWeek: 0,
+    activeDay: 0,
+    weeks: PROGRAM.weeks.map(w => ({ days: w.days.map(blankDayState) })),
+  };
+}
+
+function load() {
+  try {
+    const raw = localStorage.getItem(STORAGE_KEY);
+    if (!raw) return blankState();
+    const parsed = JSON.parse(raw);
+    if (!parsed.weeks || parsed.weeks.length !== PROGRAM.weeks.length) return blankState();
+    if (!parsed.meta) parsed.meta = { max: "", acft: "", injury: "" };
+    return parsed;
+  } catch { return blankState(); }
+}
+function save() { localStorage.setItem(STORAGE_KEY, JSON.stringify(state)); }
+
+let state = load();
+
+// ====================================================================
+// Timer
+// ====================================================================
+const timer = {
+  el: document.getElementById("timer"),
+  display: document.getElementById("tDisplay"),
+  label: document.getElementById("tLabel"),
+  toggleBtn: document.getElementById("tToggle"),
+  resetBtn: document.getElementById("tReset"),
+  closeBtn: document.getElementById("tClose"),
+  intervalId: null,
+  remaining: 0,
+  total: 0,
+  mode: "countdown",
+  running: false,
+  audioCtx: null,
+  start(labelText, seconds, mode) {
+    this.label.textContent = labelText;
+    this.mode = mode || "countdown";
+    this.total = seconds;
+    this.remaining = seconds;
+    this.running = false;
+    this.updateDisplay();
+    this.display.classList.remove("alert", "done");
+    this.el.classList.add("active");
+    this.toggleBtn.textContent = "▶";
+    this.play();
+  },
+  play() {
+    if (this.running) return;
+    this.running = true;
+    this.toggleBtn.textContent = "❚❚";
+    this.intervalId = setInterval(() => this.tick(), 1000);
+  },
+  pause() {
+    this.running = false;
+    this.toggleBtn.textContent = "▶";
+    clearInterval(this.intervalId);
+  },
+  tick() {
+    if (this.mode === "countdown") {
+      this.remaining--;
+      if (this.remaining <= 5 && this.remaining > 0) this.beep(880, 60);
+      if (this.remaining <= 0) {
+        this.remaining = 0;
+        this.updateDisplay();
+        this.display.classList.add("done");
+        this.pause();
+        this.beep(1320, 250);
+        this.vibrate([200, 100, 200, 100, 400]);
+        return;
+      }
+      if (this.remaining <= 10) this.display.classList.add("alert");
+    } else {
+      this.remaining++;
+    }
+    this.updateDisplay();
+  },
+  reset() {
+    this.pause();
+    this.remaining = this.mode === "countdown" ? this.total : 0;
+    this.display.classList.remove("alert", "done");
+    this.updateDisplay();
+  },
+  close() {
+    this.pause();
+    this.el.classList.remove("active");
+  },
+  updateDisplay() {
+    const s = Math.max(0, this.remaining);
+    const m = Math.floor(s / 60);
+    const r = s % 60;
+    this.display.textContent = m + ":" + String(r).padStart(2, "0");
+  },
+  beep(freq, ms) {
+    try {
+      if (!this.audioCtx) this.audioCtx = new (window.AudioContext || window.webkitAudioContext)();
+      const o = this.audioCtx.createOscillator();
+      const g = this.audioCtx.createGain();
+      o.connect(g); g.connect(this.audioCtx.destination);
+      o.frequency.value = freq;
+      g.gain.setValueAtTime(0.001, this.audioCtx.currentTime);
+      g.gain.exponentialRampToValueAtTime(0.3, this.audioCtx.currentTime + 0.01);
+      g.gain.exponentialRampToValueAtTime(0.001, this.audioCtx.currentTime + ms / 1000);
+      o.start();
+      o.stop(this.audioCtx.currentTime + ms / 1000);
+    } catch {}
+  },
+  vibrate(pattern) {
+    try { if (navigator.vibrate) navigator.vibrate(pattern); } catch {}
+  },
+};
+timer.toggleBtn.onclick = () => timer.running ? timer.pause() : timer.play();
+timer.resetBtn.onclick = () => timer.reset();
+timer.closeBtn.onclick = () => timer.close();
+
+// ====================================================================
+// DOM helpers
+// ====================================================================
+function el(tag, props, children) {
+  props = props || {};
+  const e = document.createElement(tag);
+  for (const k in props) {
+    const v = props[k];
+    if (k === "class") e.className = v;
+    else if (k === "html") e.innerHTML = v;
+    else if (k.indexOf("on") === 0) e.addEventListener(k.slice(2).toLowerCase(), v);
+    else e.setAttribute(k, v);
+  }
+  if (children == null) return e;
+  const arr = Array.isArray(children) ? children : [children];
+  for (let i = 0; i < arr.length; i++) {
+    const c = arr[i];
+    if (c == null) continue;
+    e.appendChild(typeof c === "string" ? document.createTextNode(c) : c);
+  }
+  return e;
+}
+
+function input(value, placeholder, unit, target, onInput, mode) {
+  const wrap = el("div", { class: "input-wrap" + (unit ? "" : " no-unit") });
+  const inp = document.createElement("input");
+  inp.type = "text";
+  inp.inputMode = mode || "decimal";
+  inp.placeholder = placeholder || "";
+  inp.value = value || "";
+  inp.addEventListener("input", function (e) { onInput(e.target.value); });
+  wrap.appendChild(inp);
+  if (unit) wrap.appendChild(el("span", { class: "unit" }, unit));
+  if (target) wrap.appendChild(el("span", { class: "target" }, "→ " + target));
+  return wrap;
+}
+
+// Lookup previous week's value for target weight
+function prevWeekValue(week, day, section, ei, si) {
+  if (week <= 0) return "";
+  for (let w = week - 1; w >= 0; w--) {
+    try {
+      const sec = state.weeks[w].days[day][section];
+      const exData = section === "main" && sec[ei] && sec[ei].sets ? sec[ei].sets[si] : sec[ei];
+      if (exData && exData.weight) return exData.weight;
+    } catch { /* ignore */ }
+  }
+  return "";
+}
+
+// ====================================================================
+// Render
+// ====================================================================
+function render() {
+  // weeks
+  const weeksEl = document.getElementById("weeks");
+  weeksEl.innerHTML = "";
+  PROGRAM.weeks.forEach(function (w, i) {
+    const t = el("div", { class: "wk" + (state.activeWeek === i ? " active" : "") });
+    t.appendChild(document.createTextNode(w.label));
+    if (w.deload) t.appendChild(el("span", { class: "deload" }, "DELOAD"));
+    t.onclick = function () { state.activeWeek = i; save(); render(); window.scrollTo(0, 0); };
+    weeksEl.appendChild(t);
+  });
+
+  // meta
+  const metaInputs = document.querySelectorAll("[data-meta]");
+  metaInputs.forEach(function (inp) {
+    inp.value = state.meta[inp.dataset.meta] || "";
+    inp.oninput = function (e) { state.meta[inp.dataset.meta] = e.target.value; save(); };
+  });
+
+  // tabs (days)
+  const tabsEl = document.getElementById("tabs");
+  tabsEl.innerHTML = "";
+  PROGRAM.weeks[state.activeWeek].days.forEach(function (d, i) {
+    const t = el("div", { class: "tab" + (state.activeDay === i ? " active" : "") });
+    t.innerHTML = d.title + (state.weeks[state.activeWeek].days[i].completed ? '<span class="check">✓</span>' : "");
+    t.onclick = function () { state.activeDay = i; save(); render(); };
+    tabsEl.appendChild(t);
+  });
+
+  // days
+  const daysEl = document.getElementById("days");
+  daysEl.innerHTML = "";
+  const dayProg = PROGRAM.weeks[state.activeWeek].days[state.activeDay];
+  const dayData = state.weeks[state.activeWeek].days[state.activeDay];
+  daysEl.appendChild(renderDay(dayProg, dayData, state.activeDay));
+}
+
+function renderDay(prog, data, idx) {
+  const wrap = el("div", { class: "day active" });
+
+  // Warmup
+  const warm = el("section", { class: "section" });
+  warm.appendChild(el("div", { class: "section-head" }, [
+    el("h2", null, prog.warmup.title.toUpperCase()),
+  ]));
+  warm.appendChild(el("div", { class: "timer-line" }, "Time to complete warmup = 6:00 min."));
+
+  prog.warmup.items.forEach(function (item, wi) {
+    const wd = data.warmup[wi];
+    const block = el("div", { class: "exercise" });
+    const head = el("div", { class: "ex-head" }, [
+      el("div", { class: "ex-name" }, item.name),
+      item.tag ? el("div", { class: "ex-tag" }, item.tag) : null,
+    ]);
+    block.appendChild(head);
+    if (item.detail) block.appendChild(el("div", { class: "ex-detail" }, item.detail));
+    if (item.prescribed) block.appendChild(el("div", { class: "ex-prescribed" }, item.prescribed));
+    const cr = el("div", { class: "check-row" + (wd.done ? " done" : "") }, [
+      el("div", { class: "check-box" }),
+      el("div", { class: "label" }, "Mark done"),
+    ]);
+    cr.onclick = function () { wd.done = !wd.done; save(); render(); };
+    block.appendChild(cr);
+
+    const row = el("div", { class: "set-row no-reps" });
+    row.appendChild(el("div", { class: "row-label" }, "Load"));
+    const prev = prevWeekValue(state.activeWeek, idx, "warmup", wi);
+    row.appendChild(input(wd.weight, "weight", "lb", prev, function (v) { wd.weight = v; save(); }));
+    row.appendChild(input(wd.pct, "%", "%", "", function (v) { wd.pct = v; save(); }));
+    block.appendChild(row);
+    warm.appendChild(block);
+  });
+
+  warm.appendChild(el("div", { class: "timer-btns" }, [
+    timerBtn("Start Warmup (6:00)", "Warmup", 6 * 60),
+  ]));
+  wrap.appendChild(warm);
+
+  // Main work
+  if (prog.main) {
+    const sec = el("section", { class: "section" });
+    sec.appendChild(el("div", { class: "section-head" }, [el("h2", null, prog.main.title.toUpperCase())]));
+    if (prog.main.meta) sec.appendChild(el("div", { class: "meta-line" }, prog.main.meta));
+
+    prog.main.exercises.forEach(function (ex, ei) {
+      const exData = data.main[ei];
+      const block = el("div", { class: "exercise" });
+      block.appendChild(el("div", { class: "ex-head" }, [
+        el("div", { class: "ex-name" }, ex.name),
+        ex.tag ? el("div", { class: "ex-tag" }, ex.tag) : null,
+      ]));
+      if (ex.detail) block.appendChild(el("div", { class: "ex-detail" }, ex.detail));
+      if (ex.prescribed) block.appendChild(el("div", { class: "ex-prescribed" }, ex.prescribed));
+
+      if (ex.sets) {
+        ex.sets.forEach(function (setSpec, si) {
+          const row = el("div", { class: "set-row" });
+          const lbl = el("div", { class: "row-label" });
+          lbl.appendChild(document.createTextNode("S" + (si + 1)));
+          lbl.appendChild(el("span", { class: "reps-tag" }, setSpec.reps));
+          row.appendChild(lbl);
+          const prev = prevWeekValue(state.activeWeek, idx, "main", ei, si);
+          row.appendChild(input(exData.sets[si].weight, "weight", "lb", prev, function (v) { exData.sets[si].weight = v; save(); }));
+          row.appendChild(input(exData.sets[si].reps, "reps", null, "", function (v) { exData.sets[si].reps = v; save(); }, "numeric"));
+          row.appendChild(input(exData.sets[si].pct, "%", "%", "", function (v) { exData.sets[si].pct = v; save(); }));
+          block.appendChild(row);
+        });
+      } else {
+        const row = el("div", { class: "set-row" });
+        row.appendChild(el("div", { class: "row-label" }, "Load"));
+        const prev = prevWeekValue(state.activeWeek, idx, "main", ei);
+        row.appendChild(input(exData.weight, "weight", "lb", prev, function (v) { exData.weight = v; save(); }));
+        row.appendChild(input(exData.reps, "reps", null, "", function (v) { exData.reps = v; save(); }, "numeric"));
+        row.appendChild(input(exData.pct, "%", "%", "", function (v) { exData.pct = v; save(); }));
+        block.appendChild(row);
+      }
+      sec.appendChild(block);
+    });
+
+    if (prog.main.timePerSetSec) {
+      sec.appendChild(el("div", { class: "timer-btns" }, [
+        timerBtn("Start Set (1:30)", prog.main.exercises[0].name, prog.main.timePerSetSec),
+      ]));
+    }
+    wrap.appendChild(sec);
+  }
+
+  // GPP / Circuit
+  if (prog.circuit) {
+    const sec = el("section", { class: "section" });
+    sec.appendChild(el("div", { class: "section-head" }, [el("h2", null, prog.circuit.title.toUpperCase())]));
+    if (prog.circuit.meta) sec.appendChild(el("div", { class: "meta-line" }, prog.circuit.meta));
+
+    prog.circuit.exercises.forEach(function (ex, ei) {
+      const exData = data.circuit[ei];
+      const block = el("div", { class: "exercise" });
+      block.appendChild(el("div", { class: "ex-head" }, [
+        el("div", { class: "ex-name" }, String.fromCharCode(97 + ei) + ") " + ex.name),
+        ex.tag ? el("div", { class: "ex-tag" }, ex.tag) : null,
+      ]));
+      if (ex.detail) block.appendChild(el("div", { class: "ex-detail" }, ex.detail));
+      if (ex.prescribed) block.appendChild(el("div", { class: "ex-prescribed" }, ex.prescribed));
+
+      const row = el("div", { class: "set-row" });
+      row.appendChild(el("div", { class: "row-label" }, "Load"));
+      const prev = prevWeekValue(state.activeWeek, idx, "circuit", ei);
+      row.appendChild(input(exData.weight, "weight", "lb", prev, function (v) { exData.weight = v; save(); }));
+      row.appendChild(input(exData.reps, "reps", null, "", function (v) { exData.reps = v; save(); }, "numeric"));
+      row.appendChild(input(exData.pct, "%", "%", "", function (v) { exData.pct = v; save(); }));
+      block.appendChild(row);
+      sec.appendChild(block);
+    });
+
+    sec.appendChild(el("div", { class: "timer-btns" }, [
+      timerBtn("Rest 30s", "GPP Rest", 30),
+      timerBtn("Rest 60s", "GPP Rest", 60),
+    ]));
+    wrap.appendChild(sec);
+  }
+
+  // AFSAP (Day 2)
+  if (prog.afsap) {
+    const sec = el("section", { class: "section" });
+    sec.appendChild(el("div", { class: "section-head" }, [el("h2", null, prog.afsap.title.toUpperCase())]));
+    if (prog.afsap.meta) sec.appendChild(el("div", { class: "meta-line" }, prog.afsap.meta));
+
+    prog.afsap.exercises.forEach(function (ex, ei) {
+      const exData = data.afsap[ei];
+      const block = el("div", { class: "exercise" });
+      block.appendChild(el("div", { class: "ex-head" }, [
+        el("div", { class: "ex-name" }, String.fromCharCode(97 + ei) + ") " + ex.name),
+        ex.tag ? el("div", { class: "ex-tag" }, ex.tag) : null,
+      ]));
+      if (ex.detail) block.appendChild(el("div", { class: "ex-detail" }, ex.detail));
+      if (ex.prescribed) block.appendChild(el("div", { class: "ex-prescribed" }, ex.prescribed));
+
+      const row = el("div", { class: "set-row" });
+      row.appendChild(el("div", { class: "row-label" }, "Load"));
+      const prev = prevWeekValue(state.activeWeek, idx, "afsap", ei);
+      row.appendChild(input(exData.weight, "weight", "lb", prev, function (v) { exData.weight = v; save(); }));
+      row.appendChild(input(exData.reps, "sets x reps", null, "", function (v) { exData.reps = v; save(); }, "text"));
+      row.appendChild(input(exData.pct, "%", "%", "", function (v) { exData.pct = v; save(); }));
+      block.appendChild(row);
+      sec.appendChild(block);
+    });
+    wrap.appendChild(sec);
+  }
+
+  // AMRAP (Day 4)
+  if (prog.amrap) {
+    const sec = el("section", { class: "section amrap-sec" });
+    sec.appendChild(el("div", { class: "section-head" }, [
+      el("h2", null, prog.amrap.title.toUpperCase()),
+    ]));
+    if (prog.amrap.meta) sec.appendChild(el("div", { class: "meta-line" }, prog.amrap.meta));
+
+    const counter = el("div", { class: "amrap-counter" });
+    const minus = el("button", { class: "ctrl" }, "−");
+    minus.onclick = function () { if (data.amrap.rounds > 0) { data.amrap.rounds--; save(); render(); } };
+    const center = document.createElement("div");
+    center.style.textAlign = "center";
+    center.appendChild(el("div", { class: "count" }, String(data.amrap.rounds)));
+    center.appendChild(el("div", { class: "label" }, "Rounds Completed"));
+    const plus = el("button", { class: "ctrl" }, "+");
+    plus.onclick = function () { data.amrap.rounds++; save(); render(); };
+    counter.appendChild(minus); counter.appendChild(center); counter.appendChild(plus);
+    sec.appendChild(counter);
+
+    sec.appendChild(el("div", { class: "timer-btns" }, [
+      timerBtn("Start AMRAP (" + (prog.amrap.durationSec / 60) + ":00)", "AMRAP", prog.amrap.durationSec),
+    ]));
+
+    prog.amrap.exercises.forEach(function (ex, ei) {
+      const exData = data.amrap.exercises[ei];
+      const block = el("div", { class: "exercise" });
+      block.appendChild(el("div", { class: "ex-head" }, [
+        el("div", { class: "ex-name" }, String.fromCharCode(65 + ei) + ") " + ex.name),
+      ]));
+      if (ex.detail) block.appendChild(el("div", { class: "ex-detail" }, ex.detail));
+      if (ex.prescribed) block.appendChild(el("div", { class: "ex-prescribed" }, ex.prescribed));
+      const row = el("div", { class: "set-row no-pct no-reps" });
+      row.appendChild(el("div", { class: "row-label" }, "Weight"));
+      const prev = prevWeekValue(state.activeWeek, idx, "amrap.exercises", ei);
+      // amrap.exercises lookup needs custom handling
+      let prevAmrap = "";
+      for (let w = state.activeWeek - 1; w >= 0; w--) {
+        try {
+          const v = state.weeks[w].days[idx].amrap.exercises[ei].weight;
+          if (v) { prevAmrap = v; break; }
+        } catch {}
+      }
+      row.appendChild(input(exData.weight, "weight", "lb", prevAmrap, function (v) { exData.weight = v; save(); }));
+      block.appendChild(row);
+      sec.appendChild(block);
+    });
+
+    // Cardio choice
+    const cardioBlock = el("div", { class: "exercise" });
+    cardioBlock.appendChild(el("div", { class: "ex-name" }, "D) Cardio (choose one)"));
+    const cp = el("div", { class: "cardio-pick" });
+    prog.amrap.cardio.forEach(function (c) {
+      const item = el("div", { class: "cp" + (data.amrap.cardio === c.name ? " active" : "") });
+      item.appendChild(el("div", null, c.name));
+      item.appendChild(el("span", { class: "target" }, c.target));
+      item.onclick = function () { data.amrap.cardio = data.amrap.cardio === c.name ? null : c.name; save(); render(); };
+      cp.appendChild(item);
+    });
+    cardioBlock.appendChild(cp);
+    sec.appendChild(cardioBlock);
+
+    wrap.appendChild(sec);
+  }
+
+  // Conditioning
+  if (prog.conditioning) {
+    const sec = el("section", { class: "section" });
+    sec.appendChild(el("div", { class: "section-head" }, [el("h2", null, prog.conditioning.title.toUpperCase())]));
+    if (prog.conditioning.meta) sec.appendChild(el("div", { class: "meta-line" }, prog.conditioning.meta));
+
+    const opts = el("div", { class: "conditioning-options" });
+    prog.conditioning.options.forEach(function (opt) {
+      const row = el("div", { class: "cond-option" + (data.conditioning === opt.key ? " active" : "") });
+      row.appendChild(el("div", { class: "cond-radio" }));
+      const body = el("div", { class: "cond-body" });
+      body.appendChild(el("div", { class: "cond-name" }, "Option " + opt.key + ": " + opt.name));
+      if (opt.detail) body.appendChild(el("div", { class: "cond-detail" }, opt.detail));
+      if (opt.target) body.appendChild(el("div", { class: "cond-target" }, opt.target));
+      row.appendChild(body);
+      row.onclick = function () { data.conditioning = data.conditioning === opt.key ? null : opt.key; save(); render(); };
+      opts.appendChild(row);
+    });
+    sec.appendChild(opts);
+
+    if (data.conditioning) {
+      const sel = prog.conditioning.options.find(function (o) { return o.key === data.conditioning; });
+      if (sel && sel.durationSec) {
+        sec.appendChild(el("div", { class: "timer-btns" }, [
+          timerBtn("Start " + sel.name + " (" + (sel.durationSec / 60) + ":00)", sel.name, sel.durationSec),
+        ]));
+      }
+    }
+
+    wrap.appendChild(sec);
+  }
+
+  // Notes
+  const notes = el("section", { class: "section" });
+  notes.appendChild(el("div", { class: "section-head" }, [el("h2", null, "SESSION NOTES")]));
+  const ta = document.createElement("textarea");
+  ta.placeholder = "How did it feel? Energy, form cues, soreness…";
+  ta.value = data.notes;
+  ta.addEventListener("input", function (e) { data.notes = e.target.value; save(); });
+  notes.appendChild(ta);
+  wrap.appendChild(notes);
+
+  // Complete
+  const btn = el("button", { class: "complete-btn" + (data.completed ? " done" : "") });
+  btn.textContent = data.completed ? "✓ Day Complete" : "Mark Day Complete";
+  btn.onclick = function () { data.completed = !data.completed; save(); render(); };
+  wrap.appendChild(btn);
+
+  return wrap;
+}
+
+function timerBtn(label, ctx, seconds) {
+  const b = el("button", { class: "tbtn" }, label);
+  b.onclick = function () { timer.start(ctx, seconds, "countdown"); };
+  return b;
+}
+
+// ====================================================================
+// Download self
+// ====================================================================
+function downloadSelf() {
+  fetch(location.href).then(function (r) { return r.text(); }).then(function (text) {
+    triggerDownload(text);
+  }).catch(function () {
+    triggerDownload("<!DOCTYPE html>\n" + document.documentElement.outerHTML);
+  });
+}
+function triggerDownload(text) {
+  const blob = new Blob([text], { type: "text/html" });
+  const url = URL.createObjectURL(blob);
+  const a = document.createElement("a");
+  a.href = url; a.download = "inh2f-work-capacity.html";
+  document.body.appendChild(a); a.click(); document.body.removeChild(a);
+  setTimeout(function () { URL.revokeObjectURL(url); }, 1000);
+}
+
+function resetAll() {
+  if (!confirm("Erase ALL tracker data (all 4 weeks) on this device?")) return;
+  localStorage.removeItem(STORAGE_KEY);
+  state = blankState();
+  render();
+}
+
+render();
+</script>
+</body>
+</html>
